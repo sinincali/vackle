@@ -1,0 +1,22 @@
+{
+  "name": "vackle",
+  "version": "0.3.2",
+  "private": true,
+  "description": "Flackle client mod",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "engines": {
+    "node": ">=25.5"
+  },
+  "packageManager": "pnpm@11.25.0",
+  "vackle": {
+    "repository": "sinincali/vackle",
+    "publicKey": "MCowBQYDK2VwAyEA8YaQeQFZZZne+H4lH4qWWUmRxxcljkrZmQQJ18GtxoA="
+  },
+  "devDependencies": {
+    "@types/node": "26.6.5",
+    "esbuild": "0.28.2",
+    "happy-dom": "21.0.1",
+    "typescript": "7.0.2"
+  }
+}
