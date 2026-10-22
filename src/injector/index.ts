@@ -18,7 +18,7 @@
 
 import { spawn } from "node:child_process";
 import { appendFileSync, existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -31,8 +31,8 @@ import { exists, readJson, safeTree } from "./files";
 import { dataDirectory, install, readManifest, uninstall, verifyFiles } from "./installer";
 import { handOff, launch, verifyRuntime } from "./launcher";
 import { installShortcuts, verifyShortcuts } from "./shortcuts";
-import { directoryFeed, githubFeed, Updates, type RuntimeFile } from "./updater";
-import { publicKey, repository, version } from "./version";
+import { directoryFeed, githubFeed, readStaged, reusable, Updates, type RuntimeFile } from "./updater";
+import { publicKey, repository, runtime, version } from "./version";
 import { powershell, processes, requireWindows } from "./windows";
 
 const hidden = new Set(["launch-hidden", "apply-update"]);
@@ -65,11 +65,26 @@ async function closeFlackle(root: string, host: Installation): Promise<void> {
 async function running(root: string, host: Installation): Promise<boolean> {
     return await exists(join(root, "launcher.lock")) || (await processes()).some(item => item.path.toLowerCase() === host.executable.toLowerCase());
 }
+async function newest(root: string): Promise<{ files: Record<RuntimeFile, Buffer>; version: string; runtime: string } | undefined> {
+    const updates = updatesFor(root);
+    if (!updates.enabled) return undefined;
+    try {
+        const staged = await updates.stage();
+        try { const { release, files } = await readStaged(staged, publicKey, await reusable(root)); return { files, version: release.version, runtime: release.runtime }; }
+        finally { await rm(staged, { recursive: true, force: true }); }
+    } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!/No newer/.test(message)) console.warn(`Could not download the latest Vackle (${message}). Installing the bundled ${version} instead.`);
+        return undefined;
+    }
+}
 async function installFor(root: string, host: Installation, repair: boolean): Promise<void> {
     if (insideData(root)) throw new Error("This is the installed copy of Vackle. Run the Vackle.exe you downloaded to install, repair or update.");
-    const outcome = await install(root, host, await sources(), { repair });
+    const latest = await newest(root);
+    const target = latest?.version ?? version;
+    const outcome = await install(root, host, latest?.files ?? await sources(), { repair, version: target, runtime: latest?.runtime ?? runtime });
     const shortcuts = await installShortcuts(root, host);
-    console.info(outcome === "unchanged" ? `Vackle ${version} is already installed and up to date.` : `Vackle ${version} installed for Flackle ${host.version}.`);
+    console.info(outcome === "unchanged" ? `Vackle ${target} is already installed and up to date.` : `Vackle ${target} installed for Flackle ${host.version}.`);
     console.info(`Shortcuts: ${shortcuts.join(", ")}`);
 }
 function startInstalled(root: string): void {
