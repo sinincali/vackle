@@ -93,7 +93,7 @@ export class PluginManager {
     initialize(): Promise<void> {
         return this.enqueue(async () => {
             for (const plugin of this.plugins) {
-                if (this.store.plugin(plugin.id)?.enabled ?? plugin.enabledByDefault ?? false) {
+                if (this.enabled(plugin.id)) {
                     const before = new Set(this.active.keys());
                     try {
                         const dependencies = this.dependencyOrder(plugin.id).filter(id => id !== plugin.id && !this.enabled(id));

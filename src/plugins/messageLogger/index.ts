@@ -17,7 +17,7 @@
  */
 
 import type { Plugin } from "../../api/types";
-import { flackleExport, flackleStore, type FlackleStore } from "../../components/flackleStores";
+import { flackleAuth, flackleStore } from "../../components/flackleStores";
 
 interface Message { id: string; content?: string; is_deleted?: boolean; edited_at?: string; sender?: { id?: string } }
 interface Messages {
@@ -38,7 +38,7 @@ export default {
     },
     async start({ settings, resources, api }) {
         const store = flackleStore<Messages>("pendingDeletes");
-        const auth = flackleExport<FlackleStore<{ user?: { id: string } | null }>>("useAuthStore:()=>", value => typeof (value as { getState?: unknown } | undefined)?.getState === "function" && "user" in ((value as FlackleStore<object>).getState()));
+        const auth = flackleAuth();
         if (!store || !auth) throw new Error("Flackle's message or account store was not found");
         const deleted = new Map<string, string>();
         const edits = new Map<string, string[]>();

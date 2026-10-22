@@ -17,14 +17,10 @@
  */
 
 import type { Plugin } from "../../api/types";
-import { fiberProps } from "../../components/reactFiber";
+import { holdComplete } from "../../components/reactFiber";
 
 const remove = 'button[aria-label="Delete message"]';
 const css = `html[data-vackle-quick-delete] ${remove}{--v2-button-ghost-text:rgb(248 113 113)!important;background-color:rgb(239 68 68 / .2)!important}`;
-function holdComplete(button: Element): (() => void) | undefined {
-    for (const props of fiberProps(button, 3)) if (props.isHoldToConfirm === true && typeof props.onHoldComplete === "function") return props.onHoldComplete as () => void;
-    return undefined;
-}
 const target = (event: Event): HTMLButtonElement | null => event.target instanceof Element ? event.target.closest<HTMLButtonElement>(remove) : null;
 
 export default {

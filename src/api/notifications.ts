@@ -52,12 +52,14 @@ export class Notifications {
         const body = document.createElement("p");
         body.className = "min-w-0 flex-1 break-words text-ui-secondary";
         body.textContent = notice.message;
-        const at = options.avatar && /^https:\/\//.test(options.avatar.url) && options.avatar.before ? [notice.message.startsWith(options.avatar.before) ? 0 : -1, notice.message.endsWith(options.avatar.before) ? notice.message.length - options.avatar.before.length : -1, notice.message.indexOf(options.avatar.before)].find(index => index >= 0) ?? -1 : -1;
+        const { url, before } = options.avatar ?? {};
+        const shown = notice.message;
+        const at = !url || !before || !/^https:\/\//.test(url) ? -1 : shown.endsWith(before) && !shown.startsWith(before) ? shown.length - before.length : shown.indexOf(before);
         if (at >= 0) {
-            const avatar = document.createElement("img"); avatar.className = "vackle-toast-avatar"; avatar.src = options.avatar!.url; avatar.alt = "";
+            const avatar = document.createElement("img"); avatar.className = "vackle-toast-avatar"; avatar.src = url!; avatar.alt = "";
             const name = document.createElement("span"); name.className = "vackle-toast-name";
-            name.append(avatar, options.avatar!.before);
-            body.replaceChildren(notice.message.slice(0, at), name, notice.message.slice(at + options.avatar!.before.length));
+            name.append(avatar, before!);
+            body.replaceChildren(shown.slice(0, at), name, shown.slice(at + before!.length));
         }
         const close = document.createElement("button");
         close.type = "button"; close.className = dismiss; close.setAttribute("aria-label", "Dismiss notification");

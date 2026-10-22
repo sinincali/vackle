@@ -17,9 +17,7 @@
  */
 
 import type { Plugin } from "../../api/types";
-import { flackleExport, type FlackleStore } from "../../components/flackleStores";
-
-type Auth = FlackleStore<{ user?: { limits?: { message_length?: number } } | null }>;
+import { flackleAuth } from "../../components/flackleStores";
 
 export default {
     id: "character-counter", name: "Character Counter", description: "Shows how many characters you have typed and the message limit under the message box.",
@@ -27,7 +25,7 @@ export default {
     settings: { "color-effects": { label: "Turn the counter yellow, orange and red as you near the limit", default: true } },
     async start({ settings, resources, api }) {
         const colors = settings["color-effects"] !== false;
-        const auth = flackleExport<Auth>("useAuthStore:()=>", value => typeof (value as { getState?: unknown } | undefined)?.getState === "function" && "user" in ((value as Auth).getState()));
+        const auth = flackleAuth<{ limits?: { message_length?: number } }>();
         const counters = new Map<HTMLTextAreaElement, HTMLElement>();
         const update = (input: HTMLTextAreaElement, counter: HTMLElement): void => {
             const limit = auth?.getState().user?.limits?.message_length || (input.maxLength > 0 ? input.maxLength : 2000); const used = input.value.length;

@@ -16,8 +16,9 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import { fiberProps } from "./reactFiber";
+
 export interface FlackleRole { id: string; name: string; color: string | null; iconUrl: string | null; hasIcon: boolean; }
-interface Fiber { memoizedProps?: unknown; return: Fiber | null; }
 function roleOf(value: unknown): FlackleRole | undefined {
     if (typeof value !== "object" || value === null) return undefined;
     const role = value as Record<string, unknown>;
@@ -27,11 +28,7 @@ function roleOf(value: unknown): FlackleRole | undefined {
 }
 export function roleFromElement(target: Element): FlackleRole | undefined {
     for (let node: Element | null = target, depth = 0; node && depth < 3; node = node.parentElement, depth++) {
-        const key = Object.keys(node).find(name => name.startsWith("__reactFiber$"));
-        let fiber = key ? (node as unknown as Record<string, Fiber | undefined>)[key] : undefined;
-        for (let level = 0; fiber && level < 3; fiber = fiber.return ?? undefined, level++) {
-            const props = fiber.memoizedProps;
-            if (typeof props !== "object" || props === null) continue;
+        for (const props of fiberProps(node, 3)) {
             const { role, children } = props as { role?: unknown; children?: unknown };
             const first: unknown = Array.isArray(children) ? children[0] : undefined;
             const found = roleOf(role) ?? (typeof first === "object" && first !== null ? roleOf((first as { props?: { role?: unknown } }).props?.role) : undefined);

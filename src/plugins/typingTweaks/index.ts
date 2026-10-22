@@ -17,7 +17,7 @@
  */
 
 import type { Plugin } from "../../api/types";
-import { flackleExport, flackleStore, type FlackleStore } from "../../components/flackleStores";
+import { flackleAuth, flackleStore } from "../../components/flackleStores";
 import { roleColor, type ServerRole } from "../../components/flackleRole";
 import { fiberProps } from "../../components/reactFiber";
 
@@ -42,7 +42,7 @@ export default {
         const typing = flackleStore<Typing>("sendGuildTypingStart"), members = flackleStore<Members>("fetchMentionedMembers");
         const roles = flackleStore<Roles>("setRolesSnapshot"), conversations = flackleStore<Conversations>("setActiveConversation");
         const social = flackleStore<Social>("removeFriendBySnowflake"), profiles = flackleStore<{ openProfileModal(user: User, serverId?: string): void }>("openProfileModal");
-        const auth = flackleExport<FlackleStore<{ user?: User | null }>>("useAuthStore:()=>", value => typeof (value as { getState?: unknown } | undefined)?.getState === "function" && "user" in ((value as FlackleStore<object>).getState()));
+        const auth = flackleAuth<User>();
         if (!typing || !members || !roles || !conversations || !social || !auth) throw new Error("One of Flackle's typing, member, role, conversation, friend or account stores was not found");
         api.observe("div.flex.items-center.gap-1\\.5.text-sm.font-medium.min-w-0", line => {
             let conversationId: string | undefined;
