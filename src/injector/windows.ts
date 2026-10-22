@@ -45,10 +45,9 @@ export function descendant(pid: number, root: number, items: ProcessInfo[]): boo
     return false;
 }
 export async function verifyPortOwner(port: number, hostPid: number): Promise<void> {
-    const listeners = await powershell<{ pid: number; address: string }[]>(
+    const [listeners, items] = await Promise.all([powershell<{ pid: number; address: string }[]>(
         "$ErrorActionPreference='Stop'; $items=@(Get-NetTCPConnection -State Listen -LocalPort ([int]$env:VACKLE_PORT) | ForEach-Object { @{pid=[int]$_.OwningProcess; address=[string]$_.LocalAddress} }); ConvertTo-Json -InputObject $items -Compress",
-        { VACKLE_PORT: String(port) });
-    const items = await processes();
+        { VACKLE_PORT: String(port) }), processes()]);
     if (!listeners.length || listeners.some(listener => !["127.0.0.1", "::1"].includes(listener.address) ||
         !descendant(listener.pid, hostPid, items))) throw new Error("Debugging endpoint is not owned by launched Flackle on loopback");
 }

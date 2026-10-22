@@ -35,7 +35,7 @@ export function overviewPage(manager: PluginManager, store: SettingsStore, custo
     const brand = element("div", "vackle-brand");
     const name = element("div");
     name.append(element("h3", "", "Vackle"), element("p", "vackle-version", `Version ${config.version} · Flackle ${config.hostVersion}`));
-    brand.append(brandIcon(40, "vackle-brand-mark"), name);
+    brand.append(brandIcon(48, "vackle-brand-mark"), name);
     const summary = element("p", "vackle-summary");
     const actionsRow = element("div", "vackle-actions");
     const tools = element("div", "vackle-actions vackle-tools");

@@ -97,6 +97,8 @@ export function bootstrap(): void {
     window.addEventListener("pagehide", pagehide);
     const initialization = (async () => {
         if (!document.body) await new Promise<void>(resolve => document.addEventListener("DOMContentLoaded", () => resolve(), { once: true }));
+        await themes.apply();
+        await customCss.apply();
         if (!document.querySelector('button[aria-label="Settings"]')) await new Promise<void>((resolve, reject) => {
             const observer = new MutationObserver(() => {
                 if (!document.querySelector('button[aria-label="Settings"]')) return;
@@ -107,10 +109,8 @@ export function bootstrap(): void {
         });
         if (stopped) return;
         extensions = new Extensions();
-        await themes.apply();
         await manager.initialize();
         panel = await createSettingsPanel(manager, store, customCss, themes, config, bridge, extensions);
-        await customCss.apply();
         updates = new UpdatePrompt(bridge, extensions.notices);
         const prompt = updates;
         extensions.commands.register("vackle", { id: "check-updates", label: "Check for Vackle Updates", description: "See whether a newer Vackle is available.", run: () => prompt.check(true) });

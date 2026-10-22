@@ -112,10 +112,11 @@ async function launchSession(root: string, updates?: Updates): Promise<"exit" | 
             if (launchError) throw launchError;
             try {
                 if (!renderer || !renderer.cdp.connected) {
-                    const pages = (await targets(port)).filter(flackleTarget);
+                    const listed = await targets(port);
+                    if (!verifiedOwner) { await verifyPortOwner(port, child.pid); verifiedOwner = true; continue; }
+                    const pages = listed.filter(flackleTarget);
                     if (pages.length > 1) throw new Error("Multiple Flackle pages detected; refusing ambiguous target");
                     if (pages[0]) {
-                        if (!verifiedOwner) { await verifyPortOwner(port, child.pid); verifiedOwner = true; }
                         const cdp = await Cdp.connect(pages[0].webSocketDebuggerUrl, port);
                         renderer = new RendererSession(cdp, root, source, session, host.version, () => { restarting = true; stopping = true; }, updates,
                             staged => { handoff = staged; restarting = true; stopping = true; });
