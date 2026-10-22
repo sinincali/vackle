@@ -168,7 +168,7 @@ export async function verifyRuntime(root: string): Promise<unknown> {
     const host = await validateInstallation(manifest.host.directory);
     const path = join(root, "runtime.json");
     await safeTree(root, path);
-    if (!await exists(path)) throw new Error("No runtime handshake. Run pnpm launch first, then verify in a second terminal.");
+    if (!await exists(path)) throw new Error("No runtime handshake. Open Flackle with Vackle first.");
     const receipt = await readJson(path);
     if (!isRecord(receipt) || receipt.hostHash !== host.sha256 || typeof receipt.hostPid !== "number" ||
         typeof receipt.launcherPid !== "number" || typeof receipt.port !== "number" || typeof receipt.session !== "string" ||

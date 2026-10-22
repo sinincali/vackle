@@ -17,7 +17,7 @@
  */
 
 import type { Plugin } from "../../api/types";
-import { flackleExport, flackleStore, type FlackleStore } from "../../components/flackleStores";
+import { flackleAuth, flackleStore } from "../../components/flackleStores";
 import { fiberProps } from "../../components/reactFiber";
 
 interface User { id: string; username?: string; display_name?: string | null; avatar_url?: string | null; }
@@ -36,7 +36,7 @@ export default {
     version: "1.1.0", author: "Xrm0s and contributors", tags: ["Chat", "Utility"], enabledByDefault: false,
     async start({ resources, api }) {
         const messages = flackleStore<{ cache: Record<string, { messages: { id: string }[] } | undefined>; addMessage(conversationId: string, message: Record<string, unknown>): void }>("addMessage");
-        const auth = flackleExport<FlackleStore<{ user?: User | null }>>("useAuthStore:()=>", value => typeof (value as { getState?: unknown } | undefined)?.getState === "function" && "user" in ((value as FlackleStore<object>).getState()));
+        const auth = flackleAuth<User>();
         if (!messages || !auth) throw new Error("Flackle's message or account store was not found");
         const store = messages;
         const dismiss = (id?: string): void => {

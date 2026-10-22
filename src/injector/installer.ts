@@ -63,9 +63,6 @@ export async function clearStaleLock(root: string): Promise<void> {
     if (alive) throw new Error("Vackle launcher is already running. Quit Flackle completely, including its tray icon, and try again.");
     await rm(path, { force: true });
 }
-export async function assertStopped(root: string): Promise<void> {
-    await clearStaleLock(root);
-}
 async function checkFolder(root: string, folder: string, manifest: Manifest): Promise<void> {
     const directory = join(root, folder);
     const names = (await readdir(directory)).sort();
@@ -86,7 +83,7 @@ export async function install(root: string, host: Installation, files: Record<Ru
     await safeTree(root);
     const target = options.version ?? version;
     compareVersions(target, target);
-    await assertStopped(root);
+    await clearStaleLock(root);
     await mkdir(root, { recursive: true });
     const installed = join(root, "installed");
     const hashes = Object.fromEntries(runtimeFiles.map(name => [name, hash(files[name])])) as Record<RuntimeFile, string>;
@@ -143,7 +140,7 @@ export async function restorePrevious(root: string): Promise<Manifest> {
 }
 export async function uninstall(root: string): Promise<void> {
     await safeTree(root);
-    await assertStopped(root);
+    await clearStaleLock(root);
     const installed = join(root, "installed");
     if (!await exists(installed)) { console.info("Vackle is not installed."); return; }
     await checkFolder(root, "installed", await readManifest(root));

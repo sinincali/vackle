@@ -27,7 +27,7 @@ export async function powershell<T>(script: string, variables: Record<string, st
     return JSON.parse(stdout.trim() || "null") as T;
 }
 export function requireWindows(): void {
-    if (process.platform !== "win32") throw new Error("This prototype supports Windows 10 and 11 only");
+    if (process.platform !== "win32") throw new Error("Vackle supports Windows 10 and 11 only");
 }
 interface ProcessInfo { pid: number; parent: number; path: string; }
 export async function processes(): Promise<ProcessInfo[]> {

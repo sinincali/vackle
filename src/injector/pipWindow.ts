@@ -16,7 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-
 import { spawn, type ChildProcess } from "node:child_process";
 
 const script = String.raw`

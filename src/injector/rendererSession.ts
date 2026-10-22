@@ -152,7 +152,7 @@ export class RendererSession {
     async dispose(): Promise<void> {
         if (this.cdp.connected) {
             if (this.scriptId) await this.cdp.send("Page.removeScriptToEvaluateOnNewDocument", { identifier: this.scriptId });
-            await this.cdp.evaluate("window.__VACKLE__?.shutdown()") ;
+            await this.cdp.evaluate("window.__VACKLE__?.shutdown()");
             await this.requestQueue;
             for (const sheet of this.sheets.values()) await this.cdp.send("CSS.setStyleSheetText", { styleSheetId: sheet, text: "" });
             await this.cdp.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "" }] });

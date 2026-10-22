@@ -23,3 +23,7 @@ export function* fiberProps(node: Element, depth: number): Generator<Record<stri
     for (let level = 0; fiber && level < depth; fiber = fiber.return ?? undefined, level++)
         if (typeof fiber.memoizedProps === "object" && fiber.memoizedProps !== null) yield fiber.memoizedProps as Record<string, unknown>;
 }
+export function holdComplete(button: Element): (() => void) | undefined {
+    for (const props of fiberProps(button, 3)) if (props.isHoldToConfirm === true && typeof props.onHoldComplete === "function") return props.onHoldComplete as () => void;
+    return undefined;
+}

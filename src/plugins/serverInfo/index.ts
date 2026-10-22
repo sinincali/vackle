@@ -17,7 +17,7 @@
  */
 
 import type { Plugin } from "../../api/types";
-import { flackleExport, flackleStore, type FlackleStore } from "../../components/flackleStores";
+import { flackleAuth, flackleStore } from "../../components/flackleStores";
 import { openModal } from "../../components/modal";
 import { element } from "../../components/primitives";
 
@@ -59,7 +59,7 @@ export default {
         const roles = flackleStore<Roles>("setRolesSnapshot"), channels = flackleStore<Channels>("fetchServerChannels");
         const social = flackleStore<Social>("removeFriendBySnowflake");
         const profiles = flackleStore<{ openProfileModal(user: User, serverId?: string): void }>("openProfileModal");
-        const auth = flackleExport<FlackleStore<{ user?: User | null }>>("useAuthStore:()=>", value => typeof (value as { getState?: unknown } | undefined)?.getState === "function" && "user" in ((value as FlackleStore<object>).getState()));
+        const auth = flackleAuth<User>();
         if (!servers || !members || !roles || !channels || !social || !auth) throw new Error("One of Flackle's server, member, role, channel, friend or account stores was not found");
         let close: (() => void) | undefined;
         resources.add(() => close?.());

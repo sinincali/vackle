@@ -27,6 +27,6 @@ export default {
         document.documentElement.dataset.vackleReducedMotion = "";
         resources.add(() => { delete document.documentElement.dataset.vackleReducedMotion; });
         await resources.style(css);
-        await resources.reduceMotion().catch(error => log("Launcher cannot emulate reduced motion; run pnpm repair to update it. CSS reductions remain active.", error));
+        await resources.reduceMotion().catch(error => log("Launcher cannot emulate reduced motion. CSS reductions remain active.", error));
     }
 } satisfies Plugin;

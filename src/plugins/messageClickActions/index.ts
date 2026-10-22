@@ -17,7 +17,7 @@
  */
 
 import type { Plugin } from "../../api/types";
-import { fiberProps } from "../../components/reactFiber";
+import { fiberProps, holdComplete } from "../../components/reactFiber";
 
 const ignored = "a,button,img,video,audio,input,textarea,[role=button],[contenteditable=true]";
 const rowOf = (event: MouseEvent): HTMLElement | null => {
@@ -27,10 +27,6 @@ const rowOf = (event: MouseEvent): HTMLElement | null => {
 };
 const isOwn = (row: Element): boolean => { for (const props of fiberProps(row, 3)) if (typeof props.isOwn === "boolean") return props.isOwn; return false; };
 const isReplyTarget = (row: Element): boolean => { for (const props of fiberProps(row, 3)) if (props.isReplyTarget === true) return true; return false; };
-function holdComplete(button: Element): (() => void) | undefined {
-    for (const props of fiberProps(button, 3)) if (props.isHoldToConfirm === true && typeof props.onHoldComplete === "function") return props.onHoldComplete as () => void;
-    return undefined;
-}
 
 export default {
     id: "message-click-actions", name: "Message Click Actions", description: "Double-click a message to reply, or your own message to edit it. Double-click it again to cancel the reply. Hold Backspace and click a message to delete it.",

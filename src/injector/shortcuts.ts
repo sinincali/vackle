@@ -148,7 +148,7 @@ export async function verifyShortcuts(root: string, locations?: ShortcutLocation
     locations ??= await shortcutLocations();
     const saved = await receipt(root, locations);
     for (const entry of saved?.entries ?? []) {
-        if (!await exists(entry.path) || hash(await readFile(entry.path)) !== entry.installedHash) throw new Error(`Launch shortcut changed or missing: ${entry.path}. Run pnpm repair.`);
+        if (!await exists(entry.path) || hash(await readFile(entry.path)) !== entry.installedHash) throw new Error(`Launch shortcut changed or missing: ${entry.path}. Run Vackle.exe and choose Repair.`);
     }
     return saved?.entries.map(entry => entry.path) ?? [];
 }

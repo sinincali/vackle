@@ -42,18 +42,18 @@ export class Resources implements ResourceScope {
         await this.bridge.motion(true);
     }
     async branding(videoId: string): Promise<Branding> {
-        if (!this.bridge.branding) throw new Error("DeArrow lookups are unavailable; run pnpm repair to update the launcher");
+        if (!this.bridge.branding) throw new Error("DeArrow lookups are unavailable; run Vackle.exe and choose Repair");
         if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) throw new Error("Invalid YouTube video ID");
         const result = await this.bridge.branding(videoId) as Partial<Branding> | null;
         return { title: typeof result?.title === "string" ? result.title : null,
             thumbnail: typeof result?.thumbnail === "number" && Number.isFinite(result.thumbnail) && result.thumbnail >= 0 ? result.thumbnail : null };
     }
     async openUri(uri: string): Promise<void> {
-        if (!this.bridge.openUri) throw new Error("Opening apps is unavailable; run pnpm repair to update the launcher");
+        if (!this.bridge.openUri) throw new Error("Opening apps is unavailable; run Vackle.exe and choose Repair");
         await this.bridge.openUri(uri);
     }
     async translate(text: string, from: string, to: string): Promise<Translation> {
-        if (!this.bridge.translate) throw new Error("Translation is unavailable; run pnpm repair to update the launcher");
+        if (!this.bridge.translate) throw new Error("Translation is unavailable; run Vackle.exe and choose Repair");
         const result = await this.bridge.translate({ text, from, to }) as Partial<Translation> | null;
         if (typeof result?.text !== "string" || typeof result.sourceLanguage !== "string") throw new Error("Translation failed");
         return { sourceLanguage: result.sourceLanguage, text: result.text };

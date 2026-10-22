@@ -18,16 +18,20 @@
 
 export interface FlackleStore<S> { getState(): S; setState(partial: Partial<S>): void; subscribe(listener: (state: S, previous: S) => void): () => void; }
 type Require = ((id: string) => Record<string, unknown>) & { m: Record<string, unknown> };
+const cache = new WeakMap<Require, Map<string, unknown>>();
 
 export function flackleExport<T>(needle: string, accept: (value: unknown) => boolean): T | undefined {
     let require: Require | undefined;
     const chunks = Reflect.get(window, Object.keys(window).find(name => name.startsWith("webpackChunk")) ?? "") as { push?(chunk: unknown): void } | undefined;
     chunks?.push?.([[Symbol("vackle")], {}, (found: Require) => { require = found; }]);
     if (!require) return undefined;
+    const known = cache.get(require) ?? new Map<string, unknown>();
+    cache.set(require, known);
+    if (known.has(needle)) return known.get(needle) as T;
     for (const id of Object.keys(require.m)) {
         if (!String(require.m[id]).includes(needle)) continue;
         const found = Object.values(require(id)).find(accept);
-        if (found !== undefined) return found as T;
+        if (found !== undefined) { known.set(needle, found); return found as T; }
     }
     return undefined;
 }
@@ -38,8 +42,11 @@ export function flackleStore<S>(key: string): FlackleStore<S> | undefined {
     });
 }
 export interface FlackleUser { id: string; username?: string; display_name?: string | null; avatar_url?: string | null; banner_url?: string | null; }
+export function flackleAuth<U = FlackleUser>(): FlackleStore<{ user?: U | null }> | undefined {
+    return flackleExport("useAuthStore:()=>", value => typeof (value as { getState?: unknown } | undefined)?.getState === "function" && "user" in ((value as FlackleStore<object>).getState()));
+}
 export function flackleMe(): FlackleUser | null | undefined {
-    return flackleExport<FlackleStore<{ user?: FlackleUser | null }>>("useAuthStore:()=>", value => typeof (value as { getState?: unknown } | undefined)?.getState === "function" && "user" in ((value as FlackleStore<object>).getState()))?.getState().user;
+    return flackleAuth()?.getState().user;
 }
 export function flackleUser(id: string): FlackleUser | undefined {
     const members = flackleStore<{ byServer: Record<string, { membersById?: Record<string, { user?: FlackleUser }> } | undefined> }>("fetchMentionedMembers")?.getState().byServer ?? {};
