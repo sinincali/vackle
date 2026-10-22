@@ -78,12 +78,23 @@ export default {
             let built = new Map<HTMLElement, HTMLElement>();
             const placed = new Map<HTMLElement, HTMLElement>();
             let frame = 0;
+            const layer = Object.assign(document.createElement("div"), { className: "vackle-folder-pips" });
+            sidebar.after(layer);
+            const mirrors = new Map<HTMLElement, HTMLElement>();
             const release = (content: HTMLElement): void => {
                 for (const property of ["position", "left", "top", "z-index", "margin"]) content.style.removeProperty(property);
                 delete content.dataset.vackleFolderContent;
             };
             const place = (): void => {
+                const edge = `${sidebar.getBoundingClientRect().left}px`, seen = new Set<HTMLElement>();
                 for (const [content, slot] of placed) {
+                    for (const pip of content.parentElement?.querySelectorAll<HTMLElement>(":scope > .w-1.rounded-r-full, :scope > .w-1 > .rounded-r-full") ?? []) {
+                        seen.add(pip); pip.dataset.vackleFolderPip = "";
+                        let mirror = mirrors.get(pip);
+                        if (!mirror) { mirror = document.createElement("div"); mirrors.set(pip, mirror); layer.append(mirror); }
+                        const box = pip.getBoundingClientRect(), look = getComputedStyle(pip);
+                        Object.assign(mirror.style, { left: edge, top: `${box.top}px`, height: `${box.height}px`, opacity: look.opacity, background: look.backgroundColor });
+                    }
                     slot.style.height = `${content.offsetHeight}px`;
                     const box = slot.getBoundingClientRect();
                     const left = box.left + (box.width - content.offsetWidth) / 2;
@@ -92,6 +103,7 @@ export default {
                     if (Math.abs(now.left - left) > .5) content.style.left = `${parseFloat(content.style.left) + left - now.left}px`;
                     if (Math.abs(now.top - box.top) > .5) content.style.top = `${parseFloat(content.style.top) + box.top - now.top}px`;
                 }
+                for (const [pip, mirror] of mirrors) if (!seen.has(pip)) { mirror.remove(); mirrors.delete(pip); delete pip.dataset.vackleFolderPip; }
                 frame = placed.size ? requestAnimationFrame(place) : 0;
             };
             let queued = false;
@@ -138,10 +150,11 @@ export default {
             return () => {
                 watcher.disconnect(); cancelAnimationFrame(frame);
                 for (const content of placed.keys()) release(content);
+                for (const pip of mirrors.keys()) delete pip.dataset.vackleFolderPip;
                 rail.setAttribute("data-rail-clip", "true");
-                sidebar.remove();
+                sidebar.remove(); layer.remove();
             };
         });
-        await resources.style("[data-vackle-folder-content]{background:none!important}.vackle-folder-slot{width:48px;flex-shrink:0}.vackle-folder-sidebar{display:flex;flex-direction:column;align-items:center;gap:12px;width:72px;flex-shrink:0;padding:12px 0;overflow-y:auto;scrollbar-width:none;border-left:1px solid rgb(255 255 255 / .04)}.vackle-folder-sidebar[hidden]{display:none}.vackle-folder-group>[data-rail-icon] *{pointer-events:none}.vackle-folder-group{display:flex;flex-direction:column;align-items:center;gap:8px;padding:4px 0 8px;border-radius:16px;background:rgb(255 255 255 / .03)}");
+        await resources.style("[data-vackle-folder-content]{background:none!important;box-shadow:none!important}[data-vackle-folder-pip]{visibility:hidden!important}.vackle-folder-pips{position:fixed;inset:0;pointer-events:none;z-index:21}.vackle-folder-pips>div{position:absolute;width:4px;border-radius:0 4px 4px 0}.vackle-folder-slot{width:48px;flex-shrink:0}.vackle-folder-sidebar{display:flex;flex-direction:column;align-items:center;gap:12px;width:72px;flex-shrink:0;padding:12px 0;overflow-y:auto;scrollbar-width:none;border-left:1px solid rgb(255 255 255 / .04)}.vackle-folder-sidebar[hidden]{display:none}.vackle-folder-group>[data-rail-icon] *{pointer-events:none}.vackle-folder-group{display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px 4px 0;border-radius:20px;background:rgb(255 255 255 / .03)}");
     }
 } satisfies Plugin;

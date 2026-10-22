@@ -17,7 +17,7 @@
  */
 
 import type { CustomCss } from "../core/customCss";
-import type { Themes } from "../core/themes";
+import { presets, type Themes } from "../core/themes";
 import type { SettingsStore } from "../settings/settingsStore";
 import { button, element, heading, settingRow, syncToggle, toggle, type RunAction } from "./primitives";
 
@@ -33,10 +33,14 @@ export function themePage(section: "themes" | "css", themes: Themes, customCss: 
     if (section === "themes") {
         const file = importer("Import theme", selected => void run(() => themes.importFile(selected)));
         const actions = element("div", "vackle-actions"); actions.append(button("Import theme", () => file.click(), "", "import"), file);
+        for (const preset of presets) if (!store.value.themes.some(theme => theme.id === preset.id))
+            actions.append(button(`Add ${preset.name}`, () => void run(() => themes.addPreset(preset.id)), "vackle-ghost"));
         const list = element("section", "vackle-section"); list.append(actions);
-        for (const theme of store.value.themes)
-            list.append(settingRow(theme.name, theme.enabled ? "Active" : "Inactive", button("Remove", () => void run(() => themes.remove(theme.id)), "vackle-ghost"),
-                toggle(`Enable theme ${theme.name}`, theme.enabled, enabled => void run(() => themes.setEnabled(theme.id, enabled)))));
+        for (const theme of store.value.themes) {
+            const name = presets.find(preset => preset.id === theme.id)?.name ?? theme.name;
+            list.append(settingRow(name, theme.enabled ? "Active" : "Inactive", button("Remove", () => void run(() => themes.remove(theme.id)), "vackle-ghost"),
+                toggle(`Enable theme ${name}`, theme.enabled, enabled => void run(() => themes.setEnabled(theme.id, enabled)))));
+        }
         if (!store.value.themes.length) {
             const empty = element("div", "vackle-empty");
             empty.append(element("p", "vackle-empty-title", "No themes installed"), element("p", "", "Import a .css file to add your first theme."));
