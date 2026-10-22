@@ -154,6 +154,7 @@ export function createToolbox(manager: PluginManager, store: SettingsStore, cust
     const open = (focus: boolean): void => { render(); menu.hidden = false; button.setAttribute("aria-expanded", "true"); position(); if (focus) menu.querySelector<HTMLButtonElement>("button")?.focus(); };
     button.addEventListener("click", event => { if (menu.hidden) open(event.detail === 0); else close(); });
     button.addEventListener("pointerdown", event => event.stopPropagation());
+    for (const type of ["pointerdown", "mousedown"]) menu.addEventListener(type, event => event.stopPropagation());
     button.addEventListener("keydown", event => { if (["ArrowDown", "ArrowUp"].includes(event.key)) { event.preventDefault(); open(true); } });
     const outside = (event: PointerEvent): void => { if (!menu.contains(event.target as Node) && !button.contains(event.target as Node)) close(); };
     const keyboard = (event: KeyboardEvent): void => {
