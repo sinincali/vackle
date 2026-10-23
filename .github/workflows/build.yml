@@ -50,10 +50,11 @@ jobs:
 
             - name: Write changelog
               run: |
-                  previous=$(gh release view devbuild --json name -q .name 2>/dev/null | awk '{print $NF}')
-                  [ -n "$previous" ] && git cat-file -e "$previous^{commit}" 2>/dev/null || previous=$(git describe --tags --abbrev=0 2>/dev/null)
-                  if [ -n "$previous" ]; then git log --format='- %s' "$previous..HEAD" | head -n 50 > "$RUNNER_TEMP/notes.md"; fi
-                  [ -s "$RUNNER_TEMP/notes.md" ] || git log -1 --format='- %s' > "$RUNNER_TEMP/notes.md"
+                  previous=$(gh release view devbuild --json name -q .name 2>/dev/null || true)
+                  previous=${previous##* }
+                  if [ -z "$previous" ] || ! git cat-file -e "$previous^{commit}" 2>/dev/null; then previous=$(git describe --tags --abbrev=0 2>/dev/null || true); fi
+                  if [ -n "$previous" ]; then git log -n 50 --format='- %s' "$previous..HEAD" > "$RUNNER_TEMP/notes.md"; fi
+                  if [ ! -s "$RUNNER_TEMP/notes.md" ]; then git log -1 --format='- %s' > "$RUNNER_TEMP/notes.md"; fi
                   cat "$RUNNER_TEMP/notes.md"
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
