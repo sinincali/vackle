@@ -20,7 +20,7 @@ export interface FlackleStore<S> { getState(): S; setState(partial: Partial<S>):
 type Require = ((id: string) => Record<string, unknown>) & { m: Record<string, unknown> };
 const cache = new WeakMap<Require, Map<string, unknown>>();
 
-export function flackleExport<T>(needle: string, accept: (value: unknown) => boolean): T | undefined {
+export function flackleExport<T>(needle: string, accept: (value: unknown, name: string) => boolean): T | undefined {
     let require: Require | undefined;
     const chunks = Reflect.get(window, Object.keys(window).find(name => name.startsWith("webpackChunk")) ?? "") as { push?(chunk: unknown): void } | undefined;
     chunks?.push?.([[Symbol("vackle")], {}, (found: Require) => { require = found; }]);
@@ -30,8 +30,8 @@ export function flackleExport<T>(needle: string, accept: (value: unknown) => boo
     if (known.has(needle)) return known.get(needle) as T;
     for (const id of Object.keys(require.m)) {
         if (!String(require.m[id]).includes(needle)) continue;
-        const found = Object.values(require(id)).find(accept);
-        if (found !== undefined) { known.set(needle, found); return found as T; }
+        const found = Object.entries(require(id)).find(([name, value]) => accept(value, name));
+        if (found) { known.set(needle, found[1]); return found[1] as T; }
     }
     return undefined;
 }

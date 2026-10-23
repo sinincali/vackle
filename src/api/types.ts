@@ -99,7 +99,7 @@ export interface ContextAction {
     run?(target: HTMLElement): void | Promise<void>;
     submenu?(target: HTMLElement): PopupMenuItem[];
 }
-export interface NoticeOptions { avatar?: { url: string; before: string }; duration?: number; }
+export interface NoticeOptions { avatar?: { url: string; before: string }; duration?: number; action?: { label: string; run(): void }; }
 export interface PluginApi {
     notify(message: string, level?: "info" | "error", options?: NoticeOptions): void;
     command(command: Command): void;

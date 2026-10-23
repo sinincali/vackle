@@ -65,7 +65,15 @@ export class Notifications {
         close.type = "button"; close.className = dismiss; close.setAttribute("aria-label", "Dismiss notification");
         close.append(uiIcon("close", 16));
         close.addEventListener("click", () => this.remove(toast));
-        toast.append(level === "error" ? uiIcon("error", 24) : brandGlyph(), body, close);
+        toast.append(level === "error" ? uiIcon("error", 24) : brandGlyph(), body);
+        if (options.action) {
+            const { label, run } = options.action;
+            const action = document.createElement("button");
+            action.type = "button"; action.className = "vackle-toast-action"; action.textContent = label;
+            action.addEventListener("click", () => { this.remove(toast); run(); });
+            toast.append(action);
+        }
+        toast.append(close);
         this.stack.unshift({ element: toast, duration: options.duration ?? (level === "error" ? 6000 : 2500) });
         this.root.append(toast);
         for (const stale of this.stack.splice(3)) stale.element.remove();

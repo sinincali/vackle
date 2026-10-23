@@ -7,7 +7,7 @@ Flackle client mod
 ## Features
 
 -   Easy to install: one `Vackle.exe` finds Flackle and sets everything up
--   49 built in plugins
+-   48 built in plugins
 -   Fairly lightweight despite the many inbuilt plugins
 -   Custom CSS and Themes: Inbuilt css editor with support to import any css files
 -   Safe updates: every release is signed, and a broken update is rolled back automatically
