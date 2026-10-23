@@ -1,0 +1,25 @@
+{
+    "manifest_version": 3,
+    "name": "Vackle",
+    "description": "Flackle client mod",
+    "version": "0.0.0",
+    "homepage_url": "https://github.com/sinincali/vackle",
+    "minimum_chrome_version": "121",
+    "icons": { "128": "icon.png" },
+    "permissions": ["storage", "scripting"],
+    "host_permissions": [
+        "https://flackle.com/*",
+        "https://www.youtube-nocookie.com/*",
+        "https://www.youtube.com/*",
+        "https://sponsor.ajay.app/*",
+        "https://translate-pa.googleapis.com/*"
+    ],
+    "background": { "service_worker": "background.js", "scripts": ["background.js"] },
+    "content_scripts": [
+        { "matches": ["https://flackle.com/*"], "js": ["vackle.js"], "run_at": "document_start", "world": "MAIN" },
+        { "matches": ["https://flackle.com/*"], "js": ["content.js"], "run_at": "document_start" }
+    ],
+    "browser_specific_settings": {
+        "gecko": { "id": "vackle@sinincali", "strict_min_version": "128.0", "data_collection_permissions": { "required": ["none"] } }
+    }
+}

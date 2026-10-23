@@ -130,6 +130,7 @@
 .vackle-modal .vackle-muted[role=status] { min-height: 16px; }
 .vackle-input { box-sizing: border-box; height: var(--vk-control); min-width: 0; padding: 0 12px; border: 1px solid transparent; border-radius: var(--vk-radius); background: var(--vk-field); color: var(--ui-text-primary); font: inherit; font-size: 14px; outline: none; transition: box-shadow var(--vk-ease); }
 .vackle-input::placeholder { color: var(--ui-text-placeholder); }
+.vackle-input::-webkit-search-cancel-button { display: none; }
 :is(.vackle-input, .vackle-css-editor):hover:not(:focus) { box-shadow: 0 0 0 1px var(--vk-ring); }
 :is(.vackle-input, .vackle-css-editor):focus { box-shadow: 0 0 0 2px var(--vk-ring); }
 :is(.vackle-input, .vackle-css-editor, .vackle-button):disabled { opacity: .5; cursor: progress; }
@@ -189,6 +190,7 @@
 
 #vackle-toolbox-button { box-sizing: border-box; flex: 0 0 32px; width: 32px; height: 24px; display: inline-flex; align-items: center; justify-content: center; margin: 0 4px 0 0; padding: 0; border: 0; border-radius: var(--vk-radius-sm); background: transparent; color: var(--ui-text-muted); cursor: pointer; transition: background-color var(--vk-ease), color var(--vk-ease); }
 #vackle-toolbox-button:is([data-placement=titlebar], [data-placement=fallback]) { position: fixed; top: 0; right: 100px; width: 33.33px; height: 32px; margin: 0; border-radius: 0; color: rgb(255 255 255 / .5); }
+#vackle-toolbox-button[data-web]:is([data-placement=titlebar], [data-placement=fallback]) { right: 0; }
 #vackle-toolbox-button[data-placement=fallback] { z-index: 10000; }
 #vackle-toolbox-button:is([data-placement=titlebar], [data-placement=fallback]) .vackle-glyph { width: 16px; height: 16px; }
 #vackle-toolbox-button:is([data-placement=titlebar], [data-placement=fallback]):is(:hover, [aria-expanded=true]) { color: #fff; }
@@ -206,6 +208,8 @@
 :is(#vackle-toolbox-menu, #vackle-toolbox-menu .vackle-submenu) { position: fixed; box-sizing: border-box; max-height: calc(100vh - 16px); overflow-y: auto; padding: 4px; border-radius: var(--vk-radius-lg); background: var(--ui-layer-bar); box-shadow: inset 0 0 0 1px var(--vk-rule-raised), var(--vk-shadow); scrollbar-width: thin; scrollbar-color: var(--ui-layer-bar-elevated) transparent; }
 :is(#vackle-toolbox-menu, #vackle-toolbox-menu .vackle-submenu) { box-shadow: inset 0 0 0 1px var(--vk-rule-raised), 0 16px 40px rgb(0 0 0 / .5), 0 4px 12px rgb(0 0 0 / .3); animation: vackle-menu-in 120ms ease-out; }
 #vackle-toolbox-menu:not(.vackle-submenu) { overflow: visible; }
+#vackle-toolbox-menu { backdrop-filter: none !important; filter: none !important; }
+#vackle-toolbox-menu::after { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; backdrop-filter: var(--lg-blur, blur(24px) saturate(160%)); pointer-events: none; }
 #vackle-toolbox-menu[data-settled], #vackle-toolbox-menu[data-settled] .vackle-submenu { animation: none; }
 #vackle-toolbox-menu::before { content: ""; position: absolute; width: 10px; height: 10px; background: var(--ui-layer-bar); transform: rotate(45deg); }
 #vackle-toolbox-menu[data-side=top]::before { top: -5px; left: calc(var(--vk-caret) - 5px); box-shadow: inset 1px 1px 0 var(--vk-rule-raised); }

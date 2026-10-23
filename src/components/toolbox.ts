@@ -30,7 +30,7 @@ interface Submenu { trigger: HTMLButtonElement; panel: HTMLElement; show(): void
 interface MenuItem { icon?: IconName; checked?: boolean; meta?: string; keys?: readonly string[]; }
 export function createToolbox(manager: PluginManager, store: SettingsStore, customCss: CustomCss, themes: Themes,
     openSettings: (section?: SettingsSection) => void, openCommands: () => void, restart?: () => Promise<void>): { button: HTMLButtonElement; dispose(): void } {
-    const button = element("button"); button.id = "vackle-toolbox-button"; button.type = "button";
+    const button = element("button"); button.id = "vackle-toolbox-button"; button.type = "button"; if (!window.__TAURI_INTERNALS__) button.dataset.web = "";
     button.title = "Vackle Toolbox"; button.setAttribute("aria-label", "Vackle Toolbox"); button.setAttribute("aria-haspopup", "menu");
     button.setAttribute("aria-expanded", "false"); button.setAttribute("aria-controls", "vackle-toolbox-menu"); button.append(brandGlyph(), element("span", "vackle-toolbox-label", "Vackle"), uiIcon("arrow", 14));
     const menu = element("div"); menu.id = "vackle-toolbox-menu"; menu.hidden = true;

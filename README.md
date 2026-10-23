@@ -17,6 +17,10 @@ Flackle client mod
 
 Download `Vackle.exe` from https://github.com/sinincali/vackle/releases/latest and run it
 
+### Browser extension (flackle.com in Chrome, Edge, Brave or Firefox)
+
+Download `extension.zip` from the latest release and unzip it. Open `chrome://extensions` (`brave://extensions` in Brave), turn on Developer mode, click Load unpacked and pick the unzipped folder. To remove it, remove the extension.
+
 ## Join our Support/Community Server
 
 https://flackle.com/invite/7VW8IXBE
