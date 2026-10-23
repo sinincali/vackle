@@ -48,7 +48,8 @@ export async function createSettingsPanel(manager: PluginManager, store: Setting
             return false;
         }
     };
-    const diagnostic = (): Record<string, unknown> => ({ vackle: config.version, flackle: config.hostVersion, runtime: "Tauri / WebView2", origin: location.origin,
+    const runtime = window.__TAURI_INTERNALS__ ? "Tauri / WebView2" : "Browser extension";
+    const diagnostic = (): Record<string, unknown> => ({ vackle: config.version, flackle: config.hostVersion, runtime, origin: location.origin,
         plugins: manager.status(), commands: extensions.commands.count, performance: window.__VACKLE__?.metrics(), themes: store.value.themes.map(theme => ({ name: theme.name, enabled: theme.enabled })) });
     let closeModal: (() => void) | undefined;
     const openPluginSettings = (id: string): void => {
@@ -90,7 +91,7 @@ export async function createSettingsPanel(manager: PluginManager, store: Setting
                 button("Command palette", () => extensions.commands.open(), "vackle-ghost", "commands"));
             const states = manager.status(); const metrics = window.__VACKLE__?.metrics();
             const values: [string, string][] = [
-                ["Vackle", config.version], ["Flackle", config.hostVersion], ["Runtime", "Tauri / WebView2"], ["Origin", location.origin],
+                ["Vackle", config.version], ["Flackle", config.hostVersion], ["Runtime", runtime], ["Origin", location.origin],
                 ["Startup", metrics?.startupMs == null ? "—" : `${metrics.startupMs.toFixed(1)} ms`],
                 ["Plugins", `${states.filter(state => state.active).length} active of ${states.length}`], ["Commands", String(extensions.commands.count)],
                 ["Themes", `${store.value.themes.filter(theme => theme.enabled).length} active of ${store.value.themes.length}`],

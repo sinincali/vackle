@@ -1,0 +1,34 @@
+/*
+ * Vackle, a modification for Flackle's desktop app
+ * Copyright (c) 2026 Xrm0s and contributors
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+interface ExtensionSender { id?: string; url?: string; frameId?: number; }
+interface ContentScript { id: string; js: string[]; matches: string[]; allFrames: boolean; runAt: "document_start"; world: "MAIN"; }
+declare const chrome: {
+    runtime: {
+        id: string;
+        getManifest(): { version: string };
+        sendMessage(message: unknown): Promise<unknown>;
+        onMessage: { addListener(listener: (message: unknown, sender: ExtensionSender, reply: (response: unknown) => void) => boolean | void): void };
+    };
+    storage: { local: { get(key: string): Promise<Record<string, unknown>>; set(items: Record<string, unknown>): Promise<void> } };
+    scripting: {
+        getRegisteredContentScripts(filter: { ids: string[] }): Promise<{ id: string }[]>;
+        registerContentScripts(scripts: ContentScript[]): Promise<void>;
+        unregisterContentScripts(filter: { ids: string[] }): Promise<void>;
+    };
+};
