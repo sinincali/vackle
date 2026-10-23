@@ -32,13 +32,13 @@ import { dataDirectory, install, readManifest, uninstall, verifyFiles } from "./
 import { handOff, launch, verifyRuntime } from "./launcher";
 import { installShortcuts, verifyShortcuts } from "./shortcuts";
 import { directoryFeed, githubFeed, readStaged, reusable, Updates, type RuntimeFile } from "./updater";
-import { publicKey, repository, runtime, version } from "./version";
+import { commit, publicKey, repository, runtime, version } from "./version";
 import { powershell, processes, requireWindows } from "./windows";
 
 const hidden = new Set(["launch-hidden", "apply-update"]);
 function updatesFor(root: string): Updates {
     const feed = process.env.VACKLE_UPDATE_FEED;
-    return new Updates(root, version, feed ? directoryFeed(feed) : repository ? githubFeed(repository) : undefined, publicKey);
+    return new Updates(root, version, feed ? directoryFeed(feed) : repository ? githubFeed(repository) : undefined, publicKey, commit);
 }
 async function popup(message: string, question = false): Promise<boolean> {
     const answer = await powershell<number>("$shell=New-Object -ComObject WScript.Shell; $shell.Popup($env:VACKLE_MESSAGE,0,'Vackle',[int]$env:VACKLE_BUTTONS)",

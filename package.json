@@ -1,10 +1,20 @@
 {
   "name": "vackle",
-  "version": "0.3.5",
+  "version": "0.4.0",
   "private": true,
   "description": "Flackle client mod",
   "license": "GPL-3.0-or-later",
   "type": "module",
+  "scripts": {
+    "build": "node scripts/build/build.mjs",
+    "buildWeb": "node scripts/build/buildWeb.mjs",
+    "watch": "pnpm build --watch",
+    "watchWeb": "pnpm buildWeb --watch",
+    "inject": "node scripts/runInstaller.mjs install",
+    "uninject": "node scripts/runInstaller.mjs uninstall",
+    "test": "pnpm testTsc && esbuild \"tests/*.test.ts\" --bundle --outdir=.test-build --platform=node --format=esm --target=node22 --packages=external --loader:.png=dataurl --loader:.css=text --log-level=warning && node --test \".test-build/*.test.js\"",
+    "testTsc": "tsc --noEmit"
+  },
   "engines": {
     "node": ">=25.5"
   },

@@ -26,14 +26,15 @@ import { isRecord } from "../settings/schema";
 export const runtimeFiles = ["Vackle.exe", "injector.cjs", "renderer.js"] as const;
 export type RuntimeFile = typeof runtimeFiles[number];
 export interface ReleaseFile { sha256: string; size: number; }
-export interface Release { version: string; runtime: string; notes: string; files: Record<RuntimeFile, ReleaseFile>; }
+export interface Release { version: string; runtime: string; notes: string; files: Record<RuntimeFile, ReleaseFile>; commit?: string; }
 export interface Reusable { runtime: string; exe: string; }
 export interface SignedRelease { manifest: string; signature: string; }
-export interface Feed { latest(): Promise<{ document: unknown; assets: Record<string, string> }>; download(url: string): Promise<Uint8Array>; }
+export interface Feed { latest(): Promise<{ document: unknown; assets: Record<string, string> }>; download(url: string): Promise<Uint8Array>; changes?(from: string, to: string): Promise<string>; }
 export interface UpdateStatus { current: string; available: { version: string; notes: string } | null; updated: { from: string; to: string } | null; error: string | null; }
 interface UpdateState { schema: 1; skipped: string | null; failed: string[]; updated: { from: string; to: string } | null; }
 const sizeLimits: Record<RuntimeFile, number> = { "Vackle.exe": 256 * 1024 * 1024, "injector.cjs": 8 * 1024 * 1024, "renderer.js": 16 * 1024 * 1024 };
 const semver = /^(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})$/;
+const sha = /^[0-9a-f]{7,40}$/;
 
 export function compareVersions(a: string, b: string): number {
     const left = semver.exec(a); const right = semver.exec(b);
@@ -55,7 +56,7 @@ export function verifyRelease(document: unknown, key: string): Release {
     const value: unknown = JSON.parse(document.manifest);
     if (!isRecord(value) || value.schema !== 1 || typeof value.version !== "string" || !semver.test(value.version) ||
         typeof value.runtime !== "string" || !/^[\w.+-]{1,64}$/.test(value.runtime) ||
-        typeof value.notes !== "string" || value.notes.length > 20000 || !isRecord(value.files) ||
+        typeof value.notes !== "string" || value.notes.length > 20000 || value.commit !== undefined && (typeof value.commit !== "string" || !sha.test(value.commit)) || !isRecord(value.files) ||
         Object.keys(value.files).sort().join(",") !== [...runtimeFiles].sort().join(","))
         throw new Error("Release manifest has an unexpected shape");
     for (const name of runtimeFiles) {
@@ -64,7 +65,7 @@ export function verifyRelease(document: unknown, key: string): Release {
             !Number.isSafeInteger(file.size) || (file.size as number) < 1 || (file.size as number) > sizeLimits[name])
             throw new Error(`Release entry for ${name} is invalid`);
     }
-    return { version: value.version, runtime: value.runtime, notes: value.notes, files: value.files as Release["files"] };
+    return { version: value.version, runtime: value.runtime, notes: value.notes, files: value.files as Release["files"], ...typeof value.commit === "string" ? { commit: value.commit } : {} };
 }
 
 async function fetchBytes(url: string, accept: string): Promise<Uint8Array> {
@@ -85,7 +86,12 @@ export function githubFeed(repository: string): Feed {
             if (!assets["vackle-release.json"]) throw new Error("The latest release has no vackle-release.json");
             return { document: await text(assets["vackle-release.json"], "application/octet-stream"), assets };
         },
-        download: url => fetchBytes(url, "application/octet-stream")
+        download: url => fetchBytes(url, "application/octet-stream"),
+        async changes(from, to) {
+            const compare = await text(`https://api.github.com/repos/${repository}/compare/${from}...${to}`, "application/vnd.github+json");
+            if (!isRecord(compare) || !Array.isArray(compare.commits)) throw new Error("GitHub returned an unexpected comparison");
+            return compare.commits.map(entry => isRecord(entry) && isRecord(entry.commit) && typeof entry.commit.message === "string" ? `- ${entry.commit.message.split("\n")[0]}` : "").filter(Boolean).reverse().join("\n");
+        }
     };
 }
 export function directoryFeed(base: string): Feed {
@@ -117,7 +123,8 @@ interface Latest { at: number; release: Release; document: unknown; assets: Reco
 export class Updates {
     private cached: Latest | undefined;
     private checking: Promise<Latest> | undefined;
-    constructor(private readonly root: string, readonly current: string, private readonly feed: Feed | undefined, private readonly key: string, private readonly maxAge = 10 * 60 * 1000) {}
+    private readonly changelogs = new Map<string, string>();
+    constructor(private readonly root: string, readonly current: string, private readonly feed: Feed | undefined, private readonly key: string, private readonly commit = "", private readonly maxAge = 10 * 60 * 1000) {}
     get enabled(): boolean { return Boolean(this.feed && this.key); }
     private latest(force = false): Promise<Latest> {
         if (!this.feed) return Promise.reject(new Error("Updates are not configured for this build"));
@@ -136,9 +143,17 @@ export class Updates {
         try {
             const { release } = await this.latest(force);
             if (compareVersions(release.version, this.current) > 0 && state.skipped !== release.version && !state.failed.includes(release.version))
-                result.available = { version: release.version, notes: release.notes };
+                result.available = { version: release.version, notes: await this.changes(release) };
         } catch (error) { result.error = error instanceof Error ? error.message : String(error); }
         return result;
+    }
+    private async changes(release: Release): Promise<string> {
+        if (!this.commit || !release.commit || !this.feed?.changes) return release.notes;
+        const known = this.changelogs.get(release.commit);
+        if (known) return known;
+        const listed = await this.feed.changes(this.commit, release.commit).catch(() => "");
+        if (listed) this.changelogs.set(release.commit, listed);
+        return listed || release.notes;
     }
     async skip(version: string): Promise<void> {
         if (!semver.test(version)) throw new Error("Invalid version");

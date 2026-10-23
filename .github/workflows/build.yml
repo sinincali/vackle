@@ -1,0 +1,83 @@
+name: Build DevBuild
+on:
+    push:
+        branches:
+            - main
+        paths:
+            - .github/workflows/build.yml
+            - src/**
+            - scripts/build/**
+            - package.json
+            - pnpm-lock.yaml
+            - pnpm-workspace.yaml
+    workflow_dispatch:
+
+concurrency:
+    group: devbuild
+    cancel-in-progress: false
+
+permissions:
+    contents: write
+
+env:
+    FORCE_COLOR: true
+
+jobs:
+    Build:
+        runs-on: windows-latest
+        defaults:
+            run:
+                shell: bash
+
+        steps:
+            - uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0
+
+            - uses: pnpm/action-setup@v6
+
+            - name: Use Node.js 26.7.0
+              uses: actions/setup-node@v6
+              with:
+                  node-version: 26.7.0
+                  cache: "pnpm"
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Type check
+              run: pnpm testTsc
+
+            - name: Write changelog
+              run: |
+                  previous=$(gh release view devbuild --json name -q .name 2>/dev/null | awk '{print $NF}')
+                  [ -n "$previous" ] && git cat-file -e "$previous^{commit}" 2>/dev/null || previous=$(git describe --tags --abbrev=0 2>/dev/null)
+                  if [ -n "$previous" ]; then git log --format='- %s' "$previous..HEAD" | head -n 50 > "$RUNNER_TEMP/notes.md"; fi
+                  [ -s "$RUNNER_TEMP/notes.md" ] || git log -1 --format='- %s' > "$RUNNER_TEMP/notes.md"
+                  cat "$RUNNER_TEMP/notes.md"
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Build web
+              run: pnpm buildWeb
+
+            - name: Build and sign
+              run: |
+                  [ -n "$SIGNING_KEY" ] || { echo "The VACKLE_SIGNING_KEY secret is missing"; exit 1; }
+                  printf '%s\n' "$SIGNING_KEY" > "$VACKLE_SIGNING_KEY"
+                  pnpm build
+                  rm -f "$VACKLE_SIGNING_KEY"
+              env:
+                  SIGNING_KEY: ${{ secrets.VACKLE_SIGNING_KEY }}
+                  VACKLE_SIGNING_KEY: ${{ runner.temp }}/signing-key.pem
+                  VACKLE_NOTES_FILE: ${{ runner.temp }}/notes.md
+
+            - name: Upload DevBuild as release
+              if: github.repository == 'sinincali/vackle'
+              run: |
+                  gh release view devbuild > /dev/null 2>&1 || gh release create devbuild --target "$GITHUB_SHA" --title "DevBuild" --notes "Built automatically from main." --latest
+                  gh release upload devbuild --clobber dist/Vackle.exe dist/injector.cjs dist/renderer.js dist/extension.zip
+                  gh release upload devbuild --clobber dist/vackle-release.json
+                  gh release edit devbuild --title "DevBuild $(git rev-parse --short HEAD)" --notes-file "$RUNNER_TEMP/notes.md" --latest
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
