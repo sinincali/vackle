@@ -107,7 +107,7 @@ export async function createSettingsPanel(manager: PluginManager, store: Setting
                 for (const failure of failures) errors.append(settingRow(manager.plugins.find(plugin => plugin.id === failure.id)?.name ?? failure.id, failure.error ?? ""));
                 root.append(errors);
             }
-            root.append(element("p", "vackle-hint", "Flackle updates are fingerprint-checked before launch. Run Vackle.exe status or Vackle.exe verify for native validation. New versions require a reviewed compatibility profile."));
+            root.append(element("p", "vackle-hint", "Run Vackle.exe status or Vackle.exe verify for native validation."));
         }
         return root;
     };
