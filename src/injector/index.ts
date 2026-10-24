@@ -172,7 +172,7 @@ async function main(): Promise<void> {
         try { await launch(root, updatesFor(root)); }
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
-            if (command === "launch-hidden" && /fingerprint|Flackle changed|product metadata/i.test(message) && await flackleChanged(root, message).catch(() => false)) return;
+            if (command === "launch-hidden" && /product metadata/i.test(message) && await flackleChanged(root, message).catch(() => false)) return;
             throw error;
         }
     } else if (command === "apply-update") {
@@ -198,10 +198,10 @@ async function main(): Promise<void> {
     else if (command === "status") {
         if (await exists(join(root, "installed"))) {
             const manifest = await verifyFiles(root);
-            await validateInstallation(manifest.host.directory);
+            const host = await validateInstallation(manifest.host.directory);
             const shortcuts = await verifyShortcuts(root);
             const status = await updatesFor(root).status(true);
-            console.info(`Vackle ${manifest.version} installed for Flackle ${manifest.host.version}: ${manifest.host.directory}`);
+            console.info(`Vackle ${manifest.version} installed for Flackle ${host.version}: ${host.directory}`);
             console.info(`${shortcuts.length} persistent launch shortcuts verified.`);
             console.info(status.available ? `Update available: ${status.available.version}` : status.error ? `Update check failed: ${status.error}` : repository || process.env.VACKLE_UPDATE_FEED ? "Vackle is up to date." : "Updates are not configured for this build.");
         } else {

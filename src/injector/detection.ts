@@ -27,10 +27,6 @@ export interface Installation {
     version: string;
     sha256: string;
 }
-const supported = {
-    version: "0.2.4",
-    sha256: "7c509ded6291dd2bdff4acbb81ae22cd4aa9b1c107232d786c8c8928188ef6ba"
-};
 export function hash(bytes: Uint8Array): string { return createHash("sha256").update(bytes).digest("hex"); }
 export async function validateInstallation(directory: string): Promise<Installation> {
     requireWindows();
@@ -39,13 +35,11 @@ export async function validateInstallation(directory: string): Promise<Installat
     if (basename(executable).toLowerCase() !== "flackle-desktop.exe" || resolve(executable).toLowerCase() !== join(canonical, "flackle-desktop.exe").toLowerCase())
         throw new Error("Executable redirects outside the selected installation");
     const data = await readFile(executable);
-    const sha256 = hash(data);
-    if (data[0] !== 0x4d || data[1] !== 0x5a || sha256 !== supported.sha256)
-        throw new Error("Unsupported Flackle fingerprint. Refusing to inject; review this build before adding compatibility.");
-    const info = await powershell<{ product: string; version: string }>(
+    if (data[0] !== 0x4d || data[1] !== 0x5a) throw new Error("Flackle product metadata does not match: not a Windows program");
+    const info = await powershell<{ product: unknown; version: unknown }>(
         "$ErrorActionPreference='Stop'; $v=(Get-Item -LiteralPath $env:VACKLE_EXE).VersionInfo; @{product=$v.ProductName; version=$v.ProductVersion} | ConvertTo-Json -Compress", { VACKLE_EXE: executable });
-    if (info.product !== "Flackle" || info.version !== supported.version) throw new Error("Flackle product metadata does not match the compatibility profile");
-    return { directory: canonical, executable, version: info.version, sha256 };
+    if (info.product !== "Flackle" || typeof info.version !== "string" || !/^\d{1,6}\.\d{1,6}\.\d{1,6}$/.test(info.version)) throw new Error("Flackle product metadata does not match");
+    return { directory: canonical, executable, version: info.version, sha256: hash(data) };
 }
 export async function detectCandidates(localAppData = process.env.LOCALAPPDATA): Promise<string[]> {
     requireWindows();

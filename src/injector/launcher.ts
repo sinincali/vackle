@@ -18,7 +18,7 @@
 
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { readFile, rm, writeFile } from "node:fs/promises";
+import { readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -60,10 +60,21 @@ async function launcherAlive(root: string): Promise<boolean> {
     const pid = isRecord(owner) && typeof owner.pid === "number" ? owner.pid : undefined;
     return pid !== undefined && pid !== process.pid && (await processes()).some(item => item.pid === pid);
 }
+const pidAlive = (pid: number): boolean => { try { process.kill(pid, 0); return true; } catch (error) { return (error as NodeJS.ErrnoException).code === "EPERM"; } };
+const fileStamp = async (path: string): Promise<string> => { const info = await stat(path); return `${info.size}:${info.mtimeMs}`; };
+export async function relaunchedHost(executable: string, previousPid: number, launchedStamp: string, owns: (pid: number) => Promise<boolean>, deps = { processes, stamp: fileStamp, delay: (ms: number) => delay(ms), now: () => Date.now() }): Promise<number | undefined> {
+    const start = deps.now();
+    for (let updating = false; deps.now() - start < 120000; await deps.delay(1000)) {
+        const items = await deps.processes();
+        for (const item of items) if (item.pid !== previousPid && item.path.toLowerCase() === executable.toLowerCase() && await owns(item.pid).catch(() => false)) return item.pid;
+        updating ||= items.some(item => item.parent === previousPid && !/msedgewebview2\.exe$/i.test(item.path)) || await deps.stamp(executable).then(stamp => stamp !== launchedStamp, () => true);
+        if (!updating && deps.now() - start >= 5000) return undefined;
+    }
+    return undefined;
+}
 async function launchSession(root: string, updates?: Updates): Promise<"exit" | "restart" | { handoff: string }> {
     const manifest = await verifyFiles(root);
-    const host = await validateInstallation(manifest.host.directory);
-    if (host.sha256 !== manifest.host.sha256) throw new Error("Flackle changed since installation");
+    let host = await validateInstallation(manifest.host.directory);
     const running = (await processes()).find(item => item.path.toLowerCase() === host.executable.toLowerCase());
     if (running) {
         for (const deadline = Date.now() + 60000; !await verifyRuntime(root).then(() => true, () => false); await delay(1000))
@@ -87,6 +98,9 @@ async function launchSession(root: string, updates?: Updates): Promise<"exit" | 
     process.on("SIGTERM", stop);
     let renderer: RendererSession | undefined;
     let child: ReturnType<typeof spawn> | undefined;
+    let hostPid = 0;
+    let adopted = false;
+    const hostAlive = (): boolean => adopted ? pidAlive(hostPid) : Boolean(child && child.exitCode === null && child.signalCode === null);
     const pip = watchPictureInPicture();
     const receiptPath = join(root, "runtime.json");
     try {
@@ -97,10 +111,12 @@ async function launchSession(root: string, updates?: Updates): Promise<"exit" | 
         const env: NodeJS.ProcessEnv = { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port} --remote-debugging-address=127.0.0.1 --disable-features=msEdgePipAlignedUI` };
         delete env.WEBVIEW2_WAIT_FOR_SCRIPT_DEBUGGER;
         delete env.WEBVIEW2_PIPE_FOR_SCRIPT_DEBUGGER;
+        let launchedStamp = await fileStamp(host.executable);
         child = spawn(host.executable, [], { cwd: host.directory, env, windowsHide: false, stdio: "ignore" });
         let launchError: Error | undefined;
         child.once("error", error => { launchError = error; });
         if (!child.pid) throw new Error("Failed to launch Flackle");
+        hostPid = child.pid;
         console.info(`Launched Flackle ${host.version}. Waiting for the Vackle renderer handshake…`);
         const deadline = Date.now() + 60000;
         let verifiedOwner = false;
@@ -108,40 +124,50 @@ async function launchSession(root: string, updates?: Updates): Promise<"exit" | 
         let acknowledged = false;
         let previousReceipt = "";
         let previousFailure = "";
-        while (!stopping && child.exitCode === null && child.signalCode === null) {
-            if (launchError) throw launchError;
-            try {
-                if (!renderer || !renderer.cdp.connected) {
-                    const listed = await targets(port);
-                    if (!verifiedOwner) { await verifyPortOwner(port, child.pid); verifiedOwner = true; continue; }
-                    const pages = listed.filter(flackleTarget);
-                    if (pages.length > 1) throw new Error("Multiple Flackle pages detected; refusing ambiguous target");
-                    if (pages[0]) {
-                        const cdp = await Cdp.connect(pages[0].webSocketDebuggerUrl, port);
-                        renderer = new RendererSession(cdp, root, source, session, host.version, () => { restarting = true; stopping = true; }, updates,
-                            staged => { handoff = staged; restarting = true; stopping = true; });
-                        try { await renderer.initialize(); } catch (error) { cdp.close(); renderer = undefined; throw error; }
+        for (;;) {
+            while (!stopping && hostAlive()) {
+                if (launchError) throw launchError;
+                try {
+                    if (!renderer || !renderer.cdp.connected) {
+                        const listed = await targets(port);
+                        if (!verifiedOwner) { await verifyPortOwner(port, hostPid); verifiedOwner = true; continue; }
+                        const pages = listed.filter(flackleTarget);
+                        if (pages.length > 1) throw new Error("Multiple Flackle pages detected; refusing ambiguous target");
+                        if (pages[0]) {
+                            const cdp = await Cdp.connect(pages[0].webSocketDebuggerUrl, port);
+                            renderer = new RendererSession(cdp, root, source, session, host.version, () => { restarting = true; stopping = true; }, updates,
+                                staged => { handoff = staged; restarting = true; stopping = true; });
+                            try { await renderer.initialize(); } catch (error) { cdp.close(); renderer = undefined; throw error; }
+                        }
                     }
+                    const state = await renderer?.ensure();
+                    if (isRecord(state) && state.ready && state.session === session) {
+                        const receipt = { session, hostPid, launcherPid: process.pid, port,
+                            hostHash: host.sha256, targetOrigin: state.origin, version: state.version, hostVersion: state.hostVersion, plugins: state.plugins };
+                        const encoded = JSON.stringify(receipt);
+                        if (encoded !== previousReceipt) {
+                            await atomicWrite(receiptPath, JSON.stringify({ ...receipt, observedAt: new Date().toISOString() }, null, 2));
+                            previousReceipt = encoded;
+                        }
+                        if (!acknowledged) { console.info(`Verified: Vackle ${version} is ready inside the real Flackle desktop renderer. Keep this launcher running.`); acknowledged = true; }
+                    } else if (!acknowledged && Date.now() > deadline) throw new Error("Runtime handshake did not complete");
+                } catch (error) {
+                    lastFailure = error instanceof Error ? error.message : String(error);
+                    if (Date.now() > deadline && !acknowledged) throw new Error(`Flackle runtime verification failed: ${lastFailure}`);
+                    if (acknowledged && lastFailure !== previousFailure) { console.error(`[Vackle:launcher] ${lastFailure}`); previousFailure = lastFailure; }
                 }
-                const state = await renderer?.ensure();
-                if (isRecord(state) && state.ready && state.session === session) {
-                    const receipt = { session, hostPid: child.pid, launcherPid: process.pid, port,
-                        hostHash: host.sha256, targetOrigin: state.origin, version: state.version, hostVersion: state.hostVersion, plugins: state.plugins };
-                    const encoded = JSON.stringify(receipt);
-                    if (encoded !== previousReceipt) {
-                        await atomicWrite(receiptPath, JSON.stringify({ ...receipt, observedAt: new Date().toISOString() }, null, 2));
-                        previousReceipt = encoded;
-                    }
-                    if (!acknowledged) { console.info(`Verified: Vackle ${version} is ready inside the real Flackle desktop renderer. Keep this launcher running.`); acknowledged = true; }
-                } else if (!acknowledged && Date.now() > deadline) throw new Error("Runtime handshake did not complete");
-            } catch (error) {
-                lastFailure = error instanceof Error ? error.message : String(error);
-                if (Date.now() > deadline && !acknowledged) throw new Error(`Flackle runtime verification failed: ${lastFailure}`);
-                if (acknowledged && lastFailure !== previousFailure) { console.error(`[Vackle:launcher] ${lastFailure}`); previousFailure = lastFailure; }
+                await delay(acknowledged ? 3000 : 250);
             }
-            await delay(acknowledged ? 3000 : 250);
+            if (!acknowledged && !stopping) throw new Error(`Flackle exited before loading Vackle: ${lastFailure}`);
+            if (stopping) break;
+            const next = await relaunchedHost(host.executable, hostPid, launchedStamp, pid => verifyPortOwner(port, pid).then(() => true));
+            if (next === undefined) break;
+            await renderer?.dispose().catch(() => renderer?.cdp.close()); renderer = undefined;
+            hostPid = next; adopted = true; previousReceipt = "";
+            host = await validateInstallation(host.directory);
+            launchedStamp = await fileStamp(host.executable);
+            console.info(`Flackle restarted itself (now ${host.version}). Reconnecting Vackle…`);
         }
-        if (!acknowledged && !stopping) throw new Error(`Flackle exited before loading Vackle: ${lastFailure}`);
     } finally {
         pip.kill();
         process.removeListener("SIGINT", stop);
@@ -149,7 +175,13 @@ async function launchSession(root: string, updates?: Updates): Promise<"exit" | 
         if (renderer) {
             try { await renderer.dispose(); } catch (error) { console.error("[Vackle:launcher] Cleanup failed:", error); renderer.cdp.close(); }
         }
-        if (restarting && child && child.exitCode === null && child.signalCode === null) {
+        if (restarting && adopted && hostAlive()) {
+            try {
+                process.kill(hostPid);
+                for (let attempt = 0; attempt < 40 && pidAlive(hostPid); attempt++) await delay(250);
+                if (pidAlive(hostPid)) throw new Error("Flackle did not exit for restart");
+            } finally { await rm(receiptPath, { force: true }); await rm(lock, { force: true }); }
+        } else if (restarting && child && child.exitCode === null && child.signalCode === null) {
             try {
                 await new Promise<void>((resolve, reject) => {
                     const timer = setTimeout(() => reject(new Error("Flackle did not exit for restart")), 10000);
