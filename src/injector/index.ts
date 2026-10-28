@@ -28,7 +28,7 @@ import { format } from "node:util";
 import { applyUpdate } from "./applyUpdate";
 import { selectInstallation, validateInstallation, type Installation } from "./detection";
 import { exists, readJson, safeTree } from "./files";
-import { dataDirectory, install, readManifest, uninstall, verifyFiles } from "./installer";
+import { clearStaleLock, dataDirectory, install, readManifest, uninstall, verifyFiles } from "./installer";
 import { handOff, launch, verifyRuntime } from "./launcher";
 import { installShortcuts, verifyShortcuts } from "./shortcuts";
 import { directoryFeed, githubFeed, readStaged, reusable, Updates, type RuntimeFile } from "./updater";
@@ -57,13 +57,14 @@ function insideData(root: string): boolean {
 async function closeFlackle(root: string, host: Installation): Promise<void> {
     for (const item of await processes()) if (item.path.toLowerCase() === host.executable.toLowerCase()) { try { process.kill(item.pid); } catch { } }
     for (let attempt = 0; attempt < 60; attempt++) {
-        if (!await exists(join(root, "launcher.lock")) && !(await processes()).some(item => item.path.toLowerCase() === host.executable.toLowerCase())) return;
+        if (!await launcherRunning(root) && !(await processes()).some(item => item.path.toLowerCase() === host.executable.toLowerCase())) return;
         await delay(250);
     }
     throw new Error("Flackle did not close. Quit it from the tray icon and try again.");
 }
+const launcherRunning = (root: string): Promise<boolean> => clearStaleLock(root).then(() => false, () => true);
 async function running(root: string, host: Installation): Promise<boolean> {
-    return await exists(join(root, "launcher.lock")) || (await processes()).some(item => item.path.toLowerCase() === host.executable.toLowerCase());
+    return await launcherRunning(root) || (await processes()).some(item => item.path.toLowerCase() === host.executable.toLowerCase());
 }
 async function newest(root: string): Promise<{ files: Record<RuntimeFile, Buffer>; version: string; runtime: string } | undefined> {
     const updates = updatesFor(root);
@@ -119,8 +120,9 @@ async function interactive(root: string): Promise<void> {
             await closeFlackle(root, host);
         }
         if (choice === "Uninstall") {
+            if (insideData(root)) throw new Error("This is the installed copy of Vackle. Run the Vackle.exe you downloaded to uninstall.");
             await uninstall(root);
-            console.info("\n  Vackle was removed. Your Vackle settings were kept, and Flackle itself was never changed.");
+            console.info("\n  Vackle was removed completely. Flackle is back exactly how it was.");
             return;
         }
         console.info("");
@@ -166,7 +168,7 @@ async function main(): Promise<void> {
     else if (command === "uninstall") {
         if (insideData(root)) throw new Error("Run the Vackle.exe you downloaded to uninstall.");
         await uninstall(root);
-        console.info("Vackle removed. Settings retained. Flackle application files were never modified.");
+        console.info("Vackle removed completely. Flackle application files were never modified.");
     } else if (command === "launch" || command === "launch-hidden") {
         process.chdir(root);
         try { await launch(root, updatesFor(root)); }

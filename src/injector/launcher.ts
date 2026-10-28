@@ -58,7 +58,7 @@ export function handOff(staged: string): void {
 async function launcherAlive(root: string): Promise<boolean> {
     const owner = await readJson(join(root, "launcher.lock")).catch(() => undefined);
     const pid = isRecord(owner) && typeof owner.pid === "number" ? owner.pid : undefined;
-    return pid !== undefined && pid !== process.pid && (await processes()).some(item => item.pid === pid);
+    return pid !== undefined && pid !== process.pid && (await processes()).some(item => item.pid === pid && /\\(vackle|node)\.exe$/i.test(item.path));
 }
 const pidAlive = (pid: number): boolean => { try { process.kill(pid, 0); return true; } catch (error) { return (error as NodeJS.ErrnoException).code === "EPERM"; } };
 const fileStamp = async (path: string): Promise<string> => { const info = await stat(path); return `${info.size}:${info.mtimeMs}`; };
