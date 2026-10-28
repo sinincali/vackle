@@ -59,7 +59,7 @@ export async function clearStaleLock(root: string): Promise<void> {
     if (!await exists(path)) return;
     const owner = await readJson(path).catch(() => undefined);
     const pid = isRecord(owner) && typeof owner.pid === "number" ? owner.pid : undefined;
-    const alive = pid !== undefined && (await processes()).some(item => item.pid === pid);
+    const alive = pid !== undefined && (await processes()).some(item => item.pid === pid && /\\(vackle|node)\.exe$/i.test(item.path));
     if (alive) throw new Error("Vackle launcher is already running. Quit Flackle completely, including its tray icon, and try again.");
     await rm(path, { force: true });
 }
@@ -141,10 +141,9 @@ export async function restorePrevious(root: string): Promise<Manifest> {
 export async function uninstall(root: string): Promise<void> {
     await safeTree(root);
     await clearStaleLock(root);
-    const installed = join(root, "installed");
-    if (!await exists(installed)) { console.info("Vackle is not installed."); return; }
-    await checkFolder(root, "installed", await readManifest(root));
-    await removeShortcuts(root);
-    await rm(installed, { recursive: true });
-    for (const folder of ["previous", "updates"]) await rm(join(root, folder), { recursive: true, force: true });
+    if (!await exists(root)) { console.info("Vackle is not installed."); return; }
+    const manifest = await readManifest(root).catch(() => undefined);
+    if (manifest) await checkFolder(root, "installed", manifest);
+    await removeShortcuts(root, undefined, manifest?.host);
+    await rm(root, { recursive: true, maxRetries: 10, retryDelay: 200 });
 }

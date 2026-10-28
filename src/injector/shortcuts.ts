@@ -73,9 +73,17 @@ export function vackleLaunch(args: string, root: string): boolean {
     const encoded = /-EncodedCommand\s+([A-Za-z0-9+/=]+)\s*$/i.exec(args ?? "")?.[1];
     if (!encoded) return false;
     const script = Buffer.from(encoded, "base64").toString("utf16le").toLowerCase();
-    return script.includes("launch-hidden") && script.includes(join(root, "installed").toLowerCase());
+    const installed = join(root, "installed").toLowerCase();
+    return script.includes("launch-hidden") && (script.includes(installed) || script.includes(installed.replaceAll("'", "''")));
 }
-async function plainShortcut(root: string, host: Installation): Promise<Buffer> {
+interface ShortcutLink { path: string; target: string; arguments: string; }
+const key = (path: string): string => resolve(path).toLowerCase();
+async function scanLinks(locations: ShortcutLocations): Promise<ShortcutLink[]> {
+    return powershell<ShortcutLink[]>(
+        "$ErrorActionPreference='Stop'; $shell=New-Object -ComObject WScript.Shell; $items=@(foreach($folder in (ConvertFrom-Json $env:VACKLE_SHORTCUT_ROOTS)){if(Test-Path -LiteralPath $folder){Get-ChildItem -LiteralPath $folder -Filter '*.lnk' -Recurse | ForEach-Object { try { $link=$shell.CreateShortcut($_.FullName); @{path=$_.FullName;target=$link.TargetPath;arguments=$link.Arguments} } catch { } }}}); ConvertTo-Json -InputObject $items -Compress",
+        { VACKLE_SHORTCUT_ROOTS: JSON.stringify(Object.values(locations)) });
+}
+async function plainShortcut(root: string, host: Pick<Installation, "executable" | "directory">): Promise<Buffer> {
     const stage = join(root, `shortcut-${randomUUID()}.lnk`);
     try {
         await powershell<null>(
@@ -88,13 +96,11 @@ export async function installShortcuts(root: string, host: Installation, locatio
     locations ??= await shortcutLocations();
     await safeTree(root); await mkdir(root, { recursive: true });
     const previous = await receipt(root, locations);
-    const candidates = await powershell<{ path: string; target: string; arguments: string }[]>(
-        "$ErrorActionPreference='Stop'; $shell=New-Object -ComObject WScript.Shell; $items=@(foreach($folder in (ConvertFrom-Json $env:VACKLE_SHORTCUT_ROOTS)){if(Test-Path -LiteralPath $folder){Get-ChildItem -LiteralPath $folder -Filter '*.lnk' -Recurse | ForEach-Object { $link=$shell.CreateShortcut($_.FullName); @{path=$_.FullName;target=$link.TargetPath;arguments=$link.Arguments} }}}); ConvertTo-Json -InputObject $items -Compress",
-        { VACKLE_SHORTCUT_ROOTS: JSON.stringify(Object.values(locations)) });
+    const candidates = await scanLinks(locations);
     const paths = new Set(previous?.entries.map(entry => entry.path) ?? []);
     const adopted = new Set<string>();
     for (const candidate of candidates) {
-        if (resolve(candidate.target).toLowerCase() === resolve(host.executable).toLowerCase()) paths.add(candidate.path);
+        if (key(candidate.target) === key(host.executable)) paths.add(candidate.path);
         else if (vackleLaunch(candidate.arguments, root) && !paths.has(candidate.path)) { paths.add(candidate.path); adopted.add(candidate.path); }
     }
     const desktop = join(locations.desktop, "Flackle.lnk");
@@ -105,13 +111,17 @@ export async function installShortcuts(root: string, host: Installation, locatio
         paths.add(path);
     }
     const launch = shortcutCommand(root);
+    const links = new Map(candidates.map(candidate => [key(candidate.path), candidate]));
     const plans: { entry: ShortcutEntry; bytes: Buffer; before: Buffer | null }[] = [];
     for (const path of paths) {
         await checkPath(path, locations);
         const before = await exists(path) ? await readFile(path) : null;
         const saved = previous?.entries.find(entry => entry.path === path);
-        if (before && saved && hash(before) !== saved.installedHash && hash(before) !== (saved.original === null ? "" : hash(Buffer.from(saved.original, "base64"))))
-            throw new Error(`Shortcut changed since installation; preserving it: ${path}`);
+        const link = links.get(key(path));
+        if (before && saved && !(link && (vackleLaunch(link.arguments, root) || key(link.target) === key(host.executable)))) {
+            console.warn(`Leaving a shortcut you changed alone: ${path}`);
+            continue;
+        }
         const stage = join(root, `shortcut-${randomUUID()}.lnk`);
         try {
             if (before) await writeFile(stage, before, { flag: "wx" });
@@ -147,27 +157,22 @@ export async function installShortcuts(root: string, host: Installation, locatio
 export async function verifyShortcuts(root: string, locations?: ShortcutLocations): Promise<string[]> {
     locations ??= await shortcutLocations();
     const saved = await receipt(root, locations);
+    const links = new Map((await scanLinks(locations)).map(link => [key(link.path), link]));
     for (const entry of saved?.entries ?? []) {
-        if (!await exists(entry.path) || hash(await readFile(entry.path)) !== entry.installedHash) throw new Error(`Launch shortcut changed or missing: ${entry.path}. Run Vackle.exe and choose Repair.`);
+        if (!vackleLaunch(links.get(key(entry.path))?.arguments ?? "", root)) throw new Error(`Launch shortcut changed or missing: ${entry.path}. Run Vackle.exe and choose Repair.`);
     }
     return saved?.entries.map(entry => entry.path) ?? [];
 }
-export async function removeShortcuts(root: string, locations?: ShortcutLocations): Promise<void> {
+export async function removeShortcuts(root: string, locations?: ShortcutLocations, host?: Pick<Installation, "executable" | "directory">): Promise<void> {
     const path = join(root, "shortcuts.json"); await safeTree(root, path);
-    if (!await exists(path)) return;
     const allowed = locations ?? await shortcutLocations();
-    const saved = await receipt(root, allowed);
-    for (const entry of saved!.entries) {
-        if (!await exists(entry.path)) continue;
-        const current = hash(await readFile(entry.path));
-        if (current !== entry.installedHash && (entry.original === null || current !== hash(Buffer.from(entry.original, "base64"))))
-            throw new Error(`Shortcut changed since installation; preserving it: ${entry.path}`);
+    const saved = await receipt(root, allowed).catch(() => undefined);
+    for (const link of await scanLinks(allowed)) {
+        if (!vackleLaunch(link.arguments, root)) continue;
+        await checkPath(link.path, allowed);
+        const entry = saved?.entries.find(item => key(item.path) === key(link.path));
+        const original = entry ? entry.original : host ? (await plainShortcut(root, host)).toString("base64") : null;
+        if (original === null) await rm(link.path); else await replace(link.path, Buffer.from(original, "base64"));
     }
-    for (const entry of saved!.entries) {
-        await checkPath(entry.path, allowed);
-        if (!await exists(entry.path)) continue;
-        if (entry.original === null) await rm(entry.path);
-        else await replace(entry.path, Buffer.from(entry.original, "base64"));
-    }
-    await rm(path);
+    await rm(path, { force: true });
 }
