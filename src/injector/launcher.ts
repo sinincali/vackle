@@ -23,10 +23,11 @@ import { createServer } from "node:net";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { Cdp, flackleTarget, targets } from "./cdp";
-import { validateInstallation } from "./detection";
+import { validateInstallation, type Installation } from "./detection";
 import { atomicWrite, exists, readJson, safeTree } from "./files";
 import { clearStaleLock, verifyFiles } from "./installer";
 import { RendererSession } from "./rendererSession";
+import { repairShortcuts } from "./shortcuts";
 import { watchPictureInPicture } from "./pipWindow";
 import { processes, verifyPortOwner } from "./windows";
 import { isRecord } from "../settings/schema";
@@ -71,6 +72,10 @@ export async function relaunchedHost(executable: string, previousPid: number, la
         if (!updating && deps.now() - start >= 5000) return undefined;
     }
     return undefined;
+}
+async function keepShortcuts(root: string, host: Installation): Promise<void> {
+    try { const fixed = await repairShortcuts(root, host); if (fixed.length) console.info(`Pointed Flackle shortcuts back at Vackle: ${fixed.join(", ")}`); }
+    catch (error) { console.error("[Vackle:launcher] Shortcut repair failed:", error instanceof Error ? error.message : error); }
 }
 async function launchSession(root: string, updates?: Updates): Promise<"exit" | "restart" | { handoff: string }> {
     const manifest = await verifyFiles(root);
@@ -167,6 +172,7 @@ async function launchSession(root: string, updates?: Updates): Promise<"exit" | 
             host = await validateInstallation(host.directory);
             launchedStamp = await fileStamp(host.executable);
             console.info(`Flackle restarted itself (now ${host.version}). Reconnecting Vackle…`);
+            await keepShortcuts(root, host);
         }
     } finally {
         pip.kill();
@@ -191,6 +197,7 @@ async function launchSession(root: string, updates?: Updates): Promise<"exit" | 
             } finally { await rm(receiptPath, { force: true }); await rm(lock, { force: true }); }
         }
         child?.unref();
+        if (!restarting) await keepShortcuts(root, host);
         await rm(receiptPath, { force: true });
         await rm(lock, { force: true });
     }

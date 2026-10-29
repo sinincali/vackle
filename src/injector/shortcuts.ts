@@ -154,6 +154,13 @@ export async function installShortcuts(root: string, host: Installation, locatio
     }
     return plans.map(plan => plan.entry.path);
 }
+export async function repairShortcuts(root: string, host: Installation, locations?: ShortcutLocations): Promise<string[]> {
+    locations ??= await shortcutLocations();
+    const plain = (await scanLinks(locations)).filter(link => key(link.target) === key(host.executable));
+    if (!plain.length) return [];
+    await installShortcuts(root, host, locations);
+    return plain.map(link => link.path);
+}
 export async function verifyShortcuts(root: string, locations?: ShortcutLocations): Promise<string[]> {
     locations ??= await shortcutLocations();
     const saved = await receipt(root, locations);
