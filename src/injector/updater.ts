@@ -160,7 +160,7 @@ export class Updates {
         await updateState(this.root, state => { state.skipped = version; });
     }
     async stage(): Promise<string> {
-        const { release, document, assets } = await this.latest();
+        const { release, document, assets } = await this.latest(true);
         if (compareVersions(release.version, this.current) <= 0) throw new Error("No newer Vackle release is available");
         const directory = join(this.root, "updates", `${release.version}-${randomUUID()}`);
         await safeTree(this.root, directory); await mkdir(directory, { recursive: true });
