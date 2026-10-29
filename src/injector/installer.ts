@@ -134,7 +134,7 @@ export async function restorePrevious(root: string): Promise<Manifest> {
     if (await exists(installed)) await renameRetry(installed, failed);
     try { await renameRetry(join(root, "previous"), installed); }
     catch (error) { if (await exists(failed)) await renameRetry(failed, installed); throw error; }
-    await rm(failed, { recursive: true, force: true });
+    await rm(failed, { recursive: true, force: true }).catch(() => undefined);
     await verifyFiles(root);
     return previous;
 }
