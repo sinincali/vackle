@@ -29,7 +29,7 @@ import { clearStaleLock, verifyFiles } from "./installer";
 import { RendererSession } from "./rendererSession";
 import { repairShortcuts } from "./shortcuts";
 import { watchPictureInPicture } from "./pipWindow";
-import { hostWebViews, launchReport, processes, verifyPortOwner } from "./windows";
+import { hostWebViews, launchReport, processes, startUnelevated, verifyPortOwner } from "./windows";
 import { isRecord } from "../settings/schema";
 import { cleanStaged, type Updates } from "./updater";
 import { version } from "./version";
@@ -133,11 +133,16 @@ async function launchSession(root: string, updates?: Updates): Promise<"exit" | 
         delete env.WEBVIEW2_PIPE_FOR_SCRIPT_DEBUGGER;
         await clearWebViews(host);
         let launchedStamp = await fileStamp(host.executable);
-        child = spawn(host.executable, [], { cwd: host.directory, env, windowsHide: false, stdio: "ignore" });
         let launchError: Error | undefined;
-        child.once("error", error => { launchError = error; });
-        if (!child.pid) throw new Error("Failed to launch Flackle");
-        hostPid = child.pid;
+        hostPid = await startUnelevated(host.executable, host.directory, env.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS!)
+            .catch(error => { console.info(`Could not start Flackle without admin: ${error instanceof Error ? error.message : error}`); return 0; });
+        if (hostPid) { adopted = true; console.info("Vackle is running as admin, so Flackle was started without admin."); }
+        else {
+            child = spawn(host.executable, [], { cwd: host.directory, env, windowsHide: false, stdio: "ignore" });
+            child.once("error", error => { launchError = error; });
+            if (!child.pid) throw new Error("Failed to launch Flackle");
+            hostPid = child.pid;
+        }
         console.info(`Launched Flackle ${host.version}. Waiting for the Vackle renderer handshake…`);
         const deadline = Date.now() + 60000;
         let verifiedOwner = false;

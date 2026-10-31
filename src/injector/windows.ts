@@ -44,6 +44,43 @@ export async function launchReport(executableName: string): Promise<string[]> {
         "$policy=@('HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge\\WebView2','HKCU:\\SOFTWARE\\Policies\\Microsoft\\Edge\\WebView2') | Where-Object { Test-Path $_ }; $lines += 'WebView2 policy: '+$(if ($policy) { $policy -join ', ' } else { 'none' }); ConvertTo-Json -InputObject $lines -Compress",
         { VACKLE_EXE: executableName });
 }
+const unelevated = `using System; using System.ComponentModel; using System.Runtime.InteropServices;
+public static class VackleUnelevated {
+    [StructLayout(LayoutKind.Sequential)] struct SidAndAttributes { public IntPtr Sid; public uint Attributes; }
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] struct StartupInfo { public int cb; public string lpReserved, lpDesktop, lpTitle; public int dwX, dwY, dwXSize, dwYSize, dwXCountChars, dwYCountChars, dwFillAttribute, dwFlags; public short wShowWindow, cbReserved2; public IntPtr lpReserved2, hStdInput, hStdOutput, hStdError; }
+    [StructLayout(LayoutKind.Sequential)] struct ProcessInformation { public IntPtr hProcess, hThread; public int dwProcessId, dwThreadId; }
+    [DllImport("advapi32.dll", SetLastError = true)] static extern bool SaferCreateLevel(uint scope, uint level, uint flags, out IntPtr handle, IntPtr reserved);
+    [DllImport("advapi32.dll", SetLastError = true)] static extern bool SaferComputeTokenFromLevel(IntPtr level, IntPtr input, out IntPtr output, uint flags, IntPtr reserved);
+    [DllImport("advapi32.dll", SetLastError = true)] static extern bool SaferCloseLevel(IntPtr handle);
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)] static extern bool ConvertStringSidToSid(string sid, out IntPtr result);
+    [DllImport("advapi32.dll", SetLastError = true)] static extern int GetLengthSid(IntPtr sid);
+    [DllImport("advapi32.dll", SetLastError = true)] static extern bool SetTokenInformation(IntPtr token, int type, ref SidAndAttributes info, int length);
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)] static extern bool CreateProcessAsUser(IntPtr token, string application, string command, IntPtr processAttributes, IntPtr threadAttributes, bool inherit, uint flags, IntPtr environment, string directory, ref StartupInfo startup, out ProcessInformation info);
+    [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
+    [DllImport("kernel32.dll")] static extern IntPtr LocalFree(IntPtr memory);
+    public static int Start(string executable, string directory) {
+        IntPtr level, token, sid;
+        if (!SaferCreateLevel(2, 0x20000, 1, out level, IntPtr.Zero)) throw new Win32Exception();
+        try { if (!SaferComputeTokenFromLevel(level, IntPtr.Zero, out token, 0, IntPtr.Zero)) throw new Win32Exception(); }
+        finally { SaferCloseLevel(level); }
+        try {
+            if (!ConvertStringSidToSid("S-1-16-8192", out sid)) throw new Win32Exception();
+            try {
+                SidAndAttributes label = new SidAndAttributes { Sid = sid, Attributes = 0x20 };
+                if (!SetTokenInformation(token, 25, ref label, Marshal.SizeOf(label) + GetLengthSid(sid))) throw new Win32Exception();
+            } finally { LocalFree(sid); }
+            StartupInfo startup = new StartupInfo { cb = Marshal.SizeOf(typeof(StartupInfo)) };
+            ProcessInformation info;
+            if (!CreateProcessAsUser(token, executable, '"' + executable + '"', IntPtr.Zero, IntPtr.Zero, false, 0, IntPtr.Zero, directory, ref startup, out info)) throw new Win32Exception();
+            CloseHandle(info.hThread); CloseHandle(info.hProcess);
+            return info.dwProcessId;
+        } finally { CloseHandle(token); }
+    }
+}`;
+export async function startUnelevated(executable: string, directory: string, browserArguments: string): Promise<number> {
+    return powershell<number>("$ErrorActionPreference='Stop'; if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { 0; return }; Add-Type -TypeDefinition $env:VACKLE_CS; Remove-Item Env:VACKLE_CS; [VackleUnelevated]::Start($env:VACKLE_EXE, $env:VACKLE_DIR)",
+        { VACKLE_CS: unelevated, VACKLE_EXE: executable, VACKLE_DIR: directory, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: browserArguments }, 30000);
+}
 export function descendant(pid: number, root: number, items: ProcessInfo[]): boolean {
     const visited = new Set<number>();
     while (!visited.has(pid)) {
@@ -56,9 +93,12 @@ export function descendant(pid: number, root: number, items: ProcessInfo[]): boo
     return false;
 }
 export async function verifyPortOwner(port: number, hostPid: number): Promise<void> {
-    const [listeners, items] = await Promise.all([powershell<{ pid: number; address: string }[]>(
-        "$ErrorActionPreference='Stop'; $items=@(Get-NetTCPConnection -State Listen -LocalPort ([int]$env:VACKLE_PORT) | ForEach-Object { @{pid=[int]$_.OwningProcess; address=[string]$_.LocalAddress} }); ConvertTo-Json -InputObject $items -Compress",
+    const [listeners, items] = await Promise.all([powershell<{ pid: number; address: string; command: string }[]>(
+        "$ErrorActionPreference='Stop'; $items=@(Get-NetTCPConnection -State Listen -LocalPort ([int]$env:VACKLE_PORT) | ForEach-Object { @{pid=[int]$_.OwningProcess; address=[string]$_.LocalAddress; command=[string](Get-CimInstance Win32_Process -Filter \"ProcessId=$($_.OwningProcess)\").CommandLine} }); ConvertTo-Json -InputObject $items -Compress",
         { VACKLE_PORT: String(port) }), processes()]);
+    const host = items.find(item => item.pid === hostPid)?.path.split("\\").pop()?.toLowerCase();
+    const hostWebView = (command: string): boolean => Boolean(host) && /\\msedgewebview2\.exe"?\s/i.test(command) &&
+        new RegExp(`--webview-exe-name="?${host!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"?(\\s|$)`, "i").test(command) && new RegExp(`--remote-debugging-port=${port}(\\s|$)`).test(command);
     if (!listeners.length || listeners.some(listener => !["127.0.0.1", "::1"].includes(listener.address) ||
-        !descendant(listener.pid, hostPid, items))) throw new Error("Debugging endpoint is not owned by launched Flackle on loopback");
+        !(descendant(listener.pid, hostPid, items) || hostWebView(listener.command)))) throw new Error("Debugging endpoint is not owned by launched Flackle on loopback");
 }
