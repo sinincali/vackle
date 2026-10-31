@@ -69,6 +69,50 @@
 
 .vackle-setting { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 4px 0; }
 .vackle-setting[hidden] { display: none; }
+.vackle-list-setting { display: flex; flex-direction: column; gap: 10px; padding: 4px 0; }
+.vackle-list-form { display: flex; align-items: center; gap: 8px; }
+.vackle-list-form .vackle-input { flex: 1; }
+.vackle-list-arrow { flex-shrink: 0; color: var(--ui-text-secondary); }
+.vackle-list-chips { box-sizing: border-box; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 6px; max-height: 180px; overflow-y: auto; padding: 8px; border-radius: var(--vk-radius); background: var(--vk-field); scrollbar-width: thin; scrollbar-color: var(--ui-text-placeholder) transparent; }
+.vackle-list-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; height: 28px; padding: 0 4px 0 10px; border: 1px solid rgb(255 255 255 / .08); border-radius: 6px; background: rgb(255 255 255 / .07); font-size: 13px; }
+.vackle-list-chip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vackle-list-key { flex-shrink: 0; max-width: 120px; font-weight: 600; }
+.vackle-list-value { max-width: 220px; color: var(--ui-text-secondary); }
+.vackle-list-remove { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--ui-text-secondary); cursor: pointer; }
+.vackle-list-empty { margin: 0; padding: 4px 2px; color: var(--ui-text-placeholder); font-size: 13px; }
+.vackle-list-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.vackle-list-count { color: var(--ui-text-secondary); font-size: 12px; }
+.vackle-modal:has(.vackle-sounds) { width: min(680px, 100%); max-height: min(780px, calc(100vh - 32px)); }
+.vackle-sounds { display: flex; flex-direction: column; gap: 20px; }
+.vackle-sounds-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 8px 8px 14px; border-radius: var(--vk-radius); background: var(--vk-field); }
+.vackle-sounds-summary { color: var(--ui-text-secondary); font-size: 13px; }
+.vackle-sound-groups { display: flex; flex-direction: column; gap: 18px; }
+.vackle-sound-group h3 { margin: 0 0 8px 2px !important; color: var(--ui-text-faint); font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.vackle-sound-list { overflow: hidden; border: 1px solid rgb(255 255 255 / .05); border-radius: var(--vk-radius-lg); background: var(--vk-field); }
+.vackle-sound { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 12px; }
+.vackle-sound + .vackle-sound, .vackle-sound-source + .vackle-sound { border-top: 1px solid rgb(255 255 255 / .05); }
+.vackle-sound-source { display: flex; align-items: center; gap: 8px; padding: 2px 12px 12px 56px; }
+.vackle-sound-source .vackle-input { flex: 1; min-width: 0; height: 32px; border-color: rgb(255 255 255 / .06); background: rgb(0 0 0 / .25); font-size: 13px; }
+.vackle-sound-play { display: grid; flex-shrink: 0; place-items: center; width: 32px; height: 32px; padding: 0 0 0 2px; border: 0; border-radius: 50%; background: rgb(255 255 255 / .08); color: var(--ui-text-primary); cursor: pointer; }
+.vackle-sound-play.is-playing { padding: 0; background: var(--ui-text-accent); color: #fff; }
+.vackle-sound-play:disabled { opacity: .3; cursor: default; }
+.vackle-sound-info { display: flex; flex: 1; flex-direction: column; min-width: 0; }
+.vackle-sound-name, .vackle-sound-detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vackle-sound-name { font-size: 14px; font-weight: 500; line-height: 20px; }
+.vackle-sound-detail { color: var(--ui-text-faint); font-size: 12px; line-height: 16px; }
+.vackle-sound[data-mode=custom] .vackle-sound-detail { color: var(--ui-text-secondary); }
+.vackle-sound[data-mode=off] .vackle-sound-name { color: var(--ui-text-faint); }
+.vackle-sound-change { padding: 0; border: 0; background: none; color: var(--ui-text-accent); font: inherit; cursor: pointer; }
+.vackle-sound-controls { display: flex; flex-shrink: 0; align-items: center; gap: 10px; }
+.vackle-sound-volume { -webkit-appearance: none; appearance: none; width: 96px; height: 4px; margin: 0; border-radius: 2px; background: linear-gradient(var(--ui-text-accent), var(--ui-text-accent)) 0 / var(--level, 100%) 100% no-repeat, rgb(255 255 255 / .12); cursor: pointer; }
+.vackle-sound-volume::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .4); }
+.vackle-sound-volume:disabled { opacity: .3; cursor: default; }
+.vackle-sound-level { width: 34px; color: var(--ui-text-secondary); font-size: 12px; font-variant-numeric: tabular-nums; text-align: right; }
+.vackle-sound[data-mode=off] .vackle-sound-level { opacity: .3; }
+.vackle-segmented { display: inline-flex; padding: 2px; border-radius: 8px; background: rgb(0 0 0 / .25); }
+.vackle-segmented button { height: 26px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--ui-text-secondary); font: inherit; font-size: 12px; font-weight: 500; cursor: pointer; }
+.vackle-segmented button[aria-checked=true] { background: rgb(255 255 255 / .1); color: var(--ui-text-primary); }
+.vackle-segmented button[data-value=off][aria-checked=true] { color: var(--ui-text-danger); }
 .vackle-setting-text { flex: 1; min-width: 0; }
 .vackle-setting-label { display: block; font-size: 14px; line-height: 20px; font-weight: 500; overflow-wrap: anywhere; }
 .vackle-page .vackle-setting-description { margin-top: 2px; color: var(--ui-text-muted); font-size: 12px; line-height: 16px; }
@@ -76,7 +120,7 @@
 .vackle-setting-controls .vackle-input { width: 240px; max-width: 40vw; }
 .vackle-error:empty { display: none; }
 
-.vackle-search-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.vackle-search-row { display: flex; gap: 8px; margin-bottom: 20px; }
 .vackle-search-row input { flex: 1; }
 
 .vackle-dropdown { position: relative; flex-shrink: 0; }
@@ -94,13 +138,6 @@
 .vackle-dropdown-option .vackle-icon { visibility: hidden; }
 .vackle-dropdown-option[aria-selected=true] .vackle-icon { visibility: visible; }
 
-.vackle-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin: 0 0 20px -2px; }
-.vackle-chips::before { content: "Tags"; margin: 0 8px 0 2px; color: var(--ui-text-faint); font-size: 12px; font-weight: 500; }
-.vackle-chips:empty { display: none; }
-.vackle-chip { box-sizing: border-box; height: 28px; padding: 0 10px; border: 0; border-radius: var(--vk-radius-sm); background: transparent; color: var(--ui-text-muted); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; transition: background-color var(--vk-ease), color var(--vk-ease); }
-.vackle-chip:hover { background: var(--vk-hover); color: var(--ui-text-secondary); }
-.vackle-chip:focus-visible { outline: 2px solid var(--vk-focus); outline-offset: 1px; }
-.vackle-chip[aria-pressed=true] { background: var(--ui-layer-chip); color: var(--ui-text-primary); }
 .vackle-plugin-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .vackle-plugin-list > .vackle-empty { grid-column: 1 / -1; }
 .vackle-restart { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; margin-bottom: 24px; border: 1px solid var(--vk-rule); border-radius: 8px; background: var(--vk-surface); }
@@ -135,7 +172,7 @@
 :is(.vackle-input, .vackle-css-editor):focus { box-shadow: 0 0 0 2px var(--vk-ring); }
 :is(.vackle-input, .vackle-css-editor, .vackle-button):disabled { opacity: .5; cursor: progress; }
 
-.vackle-button:not([data-vackle-native]) { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--vk-control); padding: 0 12px; border: 0; border-radius: var(--vk-radius); background: var(--vk-surface); color: var(--ui-text-primary); font: inherit; font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: background-color var(--vk-ease), color var(--vk-ease); }
+.vackle-button:not([data-vackle-native]) { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: var(--vk-control); padding: 0 12px; border: 0; border-radius: var(--vk-radius); background: var(--vk-surface); color: var(--ui-text-primary); font: inherit; font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer; }
 .vackle-button:not([data-vackle-native]):hover { background: var(--ui-layer-bar-elevated); }
 .vackle-button.vackle-primary:not([data-vackle-native]) { background: var(--ui-text-accent); color: #fff; }
 .vackle-button.vackle-primary:not([data-vackle-native]):hover { background: var(--ui-accent-hover); }
@@ -188,7 +225,7 @@
 .vackle-facts dt { color: var(--ui-text-muted); }
 .vackle-facts dd { overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
 
-#vackle-toolbox-button { box-sizing: border-box; flex: 0 0 32px; width: 32px; height: 24px; display: inline-flex; align-items: center; justify-content: center; margin: 0 4px 0 0; padding: 0; border: 0; border-radius: var(--vk-radius-sm); background: transparent; color: var(--ui-text-muted); cursor: pointer; transition: background-color var(--vk-ease), color var(--vk-ease); }
+#vackle-toolbox-button { box-sizing: border-box; flex: 0 0 32px; width: 32px; height: 24px; display: inline-flex; align-items: center; justify-content: center; margin: 0 4px 0 0; padding: 0; border: 0; border-radius: var(--vk-radius-sm); background: transparent; color: var(--ui-text-muted); cursor: pointer; }
 #vackle-toolbox-button:is([data-placement=titlebar], [data-placement=fallback]) { position: fixed; top: 0; right: 100px; width: 33.33px; height: 32px; margin: 0; border-radius: 0; color: rgb(255 255 255 / .5); }
 #vackle-toolbox-button[data-web]:is([data-placement=titlebar], [data-placement=fallback]) { right: 0; }
 #vackle-toolbox-button[data-placement=fallback] { z-index: 10000; }
@@ -221,7 +258,7 @@
 #vackle-toolbox-menu[hidden], #vackle-toolbox-menu [hidden] { display: none; }
 #vackle-toolbox-menu .vackle-menu-header { display: flex; align-items: center; gap: 8px; padding: 8px 8px 6px; color: var(--ui-text-primary); font-size: 13px; font-weight: 600; }
 #vackle-toolbox-menu .vackle-menu-header .vackle-glyph { width: 20px; height: 20px; color: var(--ui-text-secondary); }
-#vackle-toolbox-menu button { box-sizing: border-box; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 30px; padding: 5px 8px; border: 0; border-radius: var(--vk-radius-sm); background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; transition: background-color var(--vk-ease), color var(--vk-ease); }
+#vackle-toolbox-menu button { box-sizing: border-box; display: flex; align-items: center; gap: 10px; width: 100%; min-height: 30px; padding: 5px 8px; border: 0; border-radius: var(--vk-radius-sm); background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 #vackle-toolbox-menu button .vackle-icon { color: var(--ui-text-muted); transition: color var(--vk-ease); }
 #vackle-toolbox-menu button:is(:hover, :focus-visible, [aria-expanded=true]) { background: var(--vk-hover); color: var(--ui-text-primary); }
 #vackle-toolbox-menu button:is(:hover, :focus-visible, [aria-expanded=true]) .vackle-icon { color: var(--ui-text-secondary); }

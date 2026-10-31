@@ -37,7 +37,11 @@ function icon(entry: Entry, className: string): HTMLElement {
 export default {
     id: "mutual-group-dms", name: "Mutual Group DMs", description: "Shows the group DMs and servers you share with someone on their profile card.",
     version: "1.2.0", author: "Xrm0s and contributors", tags: ["Social", "Profiles"], enabledByDefault: false,
-    async start({ resources, api, log }) {
+    settings: {
+        "hide-flackle-mutuals": { label: "Hide Flackle's own mutual friends and servers icons", default: false }
+    },
+    async start({ settings, resources, api, log }) {
+        if (settings["hide-flackle-mutuals"] === true) await resources.style('div.absolute:has(> button[aria-label*="mutual" i]){display:none!important}');
         const conversations = flackleStore<{ conversations: Conversation[] }>("setActiveConversation");
         const servers = flackleStore<Servers>("setServerNotificationLevel");
         const members = flackleStore<Members>("fetchMentionedMembers");
@@ -87,14 +91,16 @@ export default {
             return button;
         };
         const profiles = flackleStore<{ target?: { user?: { id?: string } } | null }>("openProfileModal");
-        const attach = (header: HTMLElement | null, userId: unknown): (() => void) | undefined => {
+        const attach = (header: HTMLElement | null, userId: unknown, withServers = true): (() => void) | undefined => {
             if (!header || typeof userId !== "string" || userId === flackleMe()?.id) return undefined;
             const groups = conversations.getState().conversations.filter(conversation => conversation.type === "group" && conversation.members?.some(member => member.user?.id === userId)).map(groupEntry);
             const rows = Object.assign(document.createElement("div"), { className: "vackle-mutual-rows" });
             if (groups.length) rows.append(row(groups, "Group"));
             let live = true;
-            mutualServers(userId).then(entries => { if (live && entries.length) { rows.append(row(entries, "Server")); } }).catch(error => log("Mutual servers failed", error));
-            header.append(rows);
+            if (withServers) mutualServers(userId).then(entries => { if (live && entries.length) { rows.append(row(entries, "Server")); } }).catch(error => log("Mutual servers failed", error));
+            let handle = [...header.querySelectorAll("p, span")].find(node => /^@\S+$/.test(node.textContent?.trim() ?? "")) as Element | undefined;
+            while (handle && handle.parentElement !== header) handle = handle.parentElement ?? undefined;
+            if (handle) handle.after(rows); else header.append(rows);
             return () => { live = false; closeList?.(); rows.remove(); };
         };
         api.observe('div.fixed button[aria-label$="full profile"]', avatar => {
@@ -102,7 +108,7 @@ export default {
             for (const props of fiberProps(avatar.querySelector("span") ?? avatar, 2)) userId ??= (props.user as { id?: unknown } | undefined)?.id ?? props.userId;
             return attach(avatar.parentElement, userId);
         });
-        api.observe('[role="dialog"] div.w-30.h-30.rounded-full', frame => attach(frame.parentElement?.parentElement ?? null, profiles?.getState().target?.user?.id));
+        api.observe('[role="dialog"] div.w-30.h-30.rounded-full', frame => attach(frame.parentElement?.parentElement ?? null, profiles?.getState().target?.user?.id, false));
         await resources.style(".vackle-mutual-rows{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px}.vackle-mutual-rows:empty{display:none}.vackle-mutual-row{display:flex;align-items:center;gap:6px;padding:0;border:0;background:none;color:rgb(255 255 255 / .6);font:inherit;font-size:13px;cursor:pointer}.vackle-mutual-row:hover{color:#fff;text-decoration:underline}.vackle-mutual-stack{display:flex}.vackle-mutual-mini{width:18px;height:18px;margin-left:-5px;border-radius:50%;object-fit:cover;box-shadow:0 0 0 2px var(--ui-layer-raised,#18181d)}.vackle-mutual-mini:first-child{margin-left:0}.vackle-mutual-letter{display:inline-grid;place-items:center;background:rgb(255 255 255 / .12);color:#fff;font-size:10px;font-weight:600}.vackle-mutual-list{position:fixed;z-index:2147483646;box-sizing:border-box;width:240px;max-height:212px;overflow-y:auto;padding:4px;border-radius:12px;background:var(--ui-layer-bar,#121216);box-shadow:inset 0 0 0 1px rgb(255 255 255 / .06),0 8px 24px rgb(0 0 0 / .4);scrollbar-width:thin}.vackle-mutual-item{display:flex;align-items:center;gap:10px;width:100%;height:40px;padding:0 8px;border:0;border-radius:8px;background:transparent;color:rgb(255 255 255 / .85);font:inherit;font-size:14px;text-align:left;cursor:pointer}.vackle-mutual-item span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vackle-mutual-item:is(:hover,:focus-visible){background:rgb(255 255 255 / .06);color:#fff;outline:none}.vackle-mutual-icon{flex-shrink:0;width:28px;height:28px;border-radius:50%;object-fit:cover}");
     }
 } satisfies Plugin;

@@ -95,6 +95,16 @@ export default {
             reply.parentElement!.before(wrapper);
             return () => wrapper.remove();
         });
-        await resources.style(".vackle-modal.vackle-raw-modal{width:min(800px,100%);max-height:min(820px,calc(100vh - 32px))}.vackle-raw{gap:8px}.vackle-raw-heading{margin:4px 0 0!important;font-size:13px;font-weight:600;color:rgb(255 255 255 / .8)}.vackle-raw-code{margin:0;max-height:50vh;overflow:auto;padding:10px 12px;border-radius:8px;background:rgb(0 0 0 / .35);color:rgb(255 255 255 / .9);font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;scrollbar-width:thin}");
+        api.observe("[data-key] > div.group:not([data-message-id])", row => {
+            if (!messageOf(row) || row.querySelector("[data-message-id]")) return undefined;
+            const bar = element("div", "vackle-raw-bar absolute -top-3 right-4 flex items-center rounded-md overflow-hidden p-0.5 bg-ui-chip shadow-[0_0_4px_rgba(0,0,0,0.15)]");
+            const control = button("", () => { if (leftViews) viewMessage(row); else copyContent(row); }, "vackle-icon-button", "css");
+            control.setAttribute("aria-label", "View Raw"); control.title = leftViews ? "View Raw (right-click to copy raw content)" : "Copy Raw Content (right-click to view raw)";
+            control.style.cssText = "--v2-button-radius:6px;height:28px;--v2-button-ghost-text:rgba(255,255,255,0.5);--v2-button-ghost-text-hover:rgba(255,255,255,0.9);--v2-button-overlay-hover:rgba(255,255,255,0.05)";
+            control.addEventListener("contextmenu", event => { event.preventDefault(); event.stopPropagation(); if (leftViews) copyContent(row); else viewMessage(row); });
+            bar.append(control); row.append(bar);
+            return () => bar.remove();
+        });
+        await resources.style(".vackle-raw-bar{display:none!important}div.group:hover>.vackle-raw-bar{display:flex!important}.vackle-modal.vackle-raw-modal{width:min(800px,100%);max-height:min(820px,calc(100vh - 32px))}.vackle-raw{gap:8px}.vackle-raw-heading{margin:4px 0 0!important;font-size:13px;font-weight:600;color:rgb(255 255 255 / .8)}.vackle-raw-code{margin:0;max-height:50vh;overflow:auto;padding:10px 12px;border-radius:8px;background:rgb(0 0 0 / .35);color:rgb(255 255 255 / .9);font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;scrollbar-width:thin}");
     }
 } satisfies Plugin;

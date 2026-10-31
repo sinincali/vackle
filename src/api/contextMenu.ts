@@ -55,10 +55,11 @@ export class ContextMenus {
                 const reference = [...menu.querySelectorAll<HTMLButtonElement>(":scope > button")].find(button => button.textContent?.trim() === (action.after ?? "Copy Text")) ?? originals[originals.length - 1];
                 if (!reference) continue;
                 const danger = (node: Element): boolean => /red|danger|destructive/.test(node.className);
-                const template = originals.find(button => !button.disabled && !danger(button)) ?? originals.find(button => !button.disabled) ?? reference;
+                const template = (action.danger ? originals.find(button => !button.disabled && danger(button)) : undefined) ?? originals.find(button => !button.disabled && !danger(button)) ?? originals.find(button => !button.disabled) ?? reference;
                 const button = template.cloneNode(true) as HTMLButtonElement;
                 button.disabled = false;
-                if (danger(button)) { button.className = button.className.split(/\s+/).filter(name => !/red|danger|destructive/.test(name)).join(" "); button.classList.add("text-white/90"); }
+                if (action.danger) { if (!danger(button)) button.style.color = "#f87171"; }
+                else if (danger(button)) { button.className = button.className.split(/\s+/).filter(name => !/red|danger|destructive/.test(name)).join(" "); button.classList.add("text-white/90"); }
                 button.removeAttribute("id");
                 button.dataset.vackleContextAction = action.id;
                 button.setAttribute("role", "menuitem");
@@ -110,7 +111,7 @@ export class ContextMenus {
                 };
                 button.addEventListener("pointerup", event => { if (event.button === 0) activate(event); });
                 button.addEventListener("click", activate);
-                reference.after(button);
+                if (action.last) menu.append(button); else reference.after(button);
                 this.nodes.add(button);
             }
             const bounds = menu.getBoundingClientRect();

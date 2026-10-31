@@ -75,7 +75,7 @@ export default {
         });
         api.observe("[data-message-id]", row => { decorate(row); return () => { row.classList.remove("vackle-deleted"); row.querySelector(".vackle-edit-history")?.remove(); }; });
         api.contextMenu({
-            id: "remove-message-history", label: "Remove Message History", icon: "close", selector: "[data-message-id]",
+            id: "remove-message-history", label: "Clear Message History", icon: "clock", last: true, danger: true, selector: "[data-message-id]",
             matches: target => deleted.has(target.dataset.messageId!) || edits.has(target.dataset.messageId!),
             run: target => {
                 const id = target.dataset.messageId!; const conversation = deleted.get(id);
@@ -85,6 +85,6 @@ export default {
         });
         document.documentElement.dataset.vackleDeleteStyle = settings["delete-style"] === "Faded" ? "faded" : "red";
         resources.add(() => { delete document.documentElement.dataset.vackleDeleteStyle; });
-        await resources.style("html[data-vackle-delete-style=red] .vackle-deleted [data-message-content]>:not(.vackle-edit-history){color:#f87171!important}html[data-vackle-delete-style=faded] .vackle-deleted{opacity:.45}.vackle-edit-history{color:rgb(255 255 255 / .45);font-size:.9rem;white-space:pre-wrap;overflow-wrap:anywhere}.vackle-edit-history span{margin-left:6px;font-size:.65rem;opacity:.8}");
+        await resources.style("html[data-vackle-delete-style=red] .vackle-deleted [data-message-content]>:not(.vackle-edit-history){color:#f87171!important}html[data-vackle-delete-style=red] .vackle-deleted [data-message-content] a:not(.vackle-edit-history *){color:#f87171!important}html[data-vackle-delete-style=red] .vackle-deleted [data-message-content] :is(img,video){filter:grayscale(1)}html[data-vackle-delete-style=faded] .vackle-deleted{opacity:.45}.vackle-edit-history{color:rgb(255 255 255 / .45);font-size:.9rem;white-space:pre-wrap;overflow-wrap:anywhere}.vackle-edit-history span{margin-left:6px;font-size:.65rem;opacity:.8}");
     }
 } satisfies Plugin;

@@ -16,9 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import type { Bridge } from "../api/types";
 import type { PluginManager } from "../core/pluginManager";
 import type { SettingsStore } from "../settings/settingsStore";
 import { dropdown } from "./dropdown";
+import { listSetting } from "./listSetting";
 import { button, element, heading, onDispose, settingRow, settingsCog, syncToggle, toggle, type RunAction } from "./primitives";
 
 interface PluginPageState { query: string; filter: string; tags: string[]; }
@@ -36,15 +38,10 @@ export function pluginPage(manager: PluginManager, run: RunAction, openSettings:
     search.type = "search"; search.placeholder = "Search plugins…"; search.setAttribute("aria-label", "Search plugins");
     search.value = state.query;
     const filter = dropdown("Filter plugins", [{ options: ["All", "Enabled", "Disabled"] }], state.filter, value => { state.filter = value; applyFilters(); });
+    const tags = [...new Set(manager.plugins.flatMap(plugin => plugin.tags ?? []))].sort();
+    const tagFilter = dropdown("Filter by tag", [{ options: ["All tags", ...tags] }], state.tags[0] ?? "All tags", value => { state.tags = value === "All tags" ? [] : [value]; applyFilters(); });
     const tools = element("div", "vackle-search-row"); tools.append(search, filter.root);
-    const chips = element("div", "vackle-chips"); chips.setAttribute("role", "group"); chips.setAttribute("aria-label", "Filter by tag");
-    const syncChips = (): void => { for (const chip of chips.children) chip.setAttribute("aria-pressed", String(state.tags.includes(chip.textContent ?? ""))); };
-    for (const tag of [...new Set(manager.plugins.flatMap(plugin => plugin.tags ?? []))].sort()) {
-        const chip = element("button", "vackle-chip", tag); chip.type = "button";
-        chip.addEventListener("click", () => { state.tags = state.tags.includes(tag) ? state.tags.filter(entry => entry !== tag) : [...state.tags, tag]; syncChips(); applyFilters(); });
-        chips.append(chip);
-    }
-    syncChips();
+    if (tags.length) tools.append(tagFilter.root);
     const list = element("div", "vackle-plugin-list");
     const plugins = manager.plugins.sort((a, b) => a.name.localeCompare(b.name));
     const cards = new Map<string, HTMLElement>();
@@ -87,7 +84,7 @@ export function pluginPage(manager: PluginManager, run: RunAction, openSettings:
         cards.set(plugin.id, card); list.append(card);
     }
     const empty = element("div", "vackle-empty", "No plugins match your search.");
-    empty.append(button("Clear filters", () => { state.query = search.value = ""; state.filter = filter.value = "All"; state.tags = []; syncChips(); applyFilters(); }));
+    empty.append(button("Clear filters", () => { state.query = search.value = ""; state.filter = filter.value = "All"; state.tags = []; tagFilter.value = "All tags"; applyFilters(); }));
     list.append(empty);
     search.addEventListener("input", () => { state.query = search.value; applyFilters(); });
     const update = (): void => {
@@ -103,10 +100,10 @@ export function pluginPage(manager: PluginManager, run: RunAction, openSettings:
         applyFilters();
     };
     const stop = manager.observeChanges(update);
-    onDispose(root, () => { stop(); filter.dispose(); });
-    root.append(tools, chips, list); update(); return root;
+    onDispose(root, () => { stop(); filter.dispose(); tagFilter.dispose(); });
+    root.append(tools, list); update(); return root;
 }
-export function pluginSettings(manager: PluginManager, store: SettingsStore, id: string, run: RunAction): HTMLElement {
+export function pluginSettings(manager: PluginManager, store: SettingsStore, id: string, run: RunAction, tools: Pick<Bridge, "fetchSound"> = {}): HTMLElement {
     const plugin = manager.plugins.find(entry => entry.id === id);
     if (!plugin?.settings) throw new Error("Plugin has no configurable settings");
     const root = element("div", "vackle-plugin-settings");
@@ -121,6 +118,14 @@ export function pluginSettings(manager: PluginManager, store: SettingsStore, id:
                 input.disabled = false; message.textContent = success ? manager.pendingRestart ? "Saved. Restart Flackle to apply changes." : "Saved" : "Unable to save. Check the notification log.";
             });
         };
+        const persist = (next: string | number | boolean): void => {
+            void run(() => manager.setSetting(id, key, next), false).then(success => {
+                message.textContent = success ? manager.pendingRestart ? "Saved. Restart Flackle to apply changes." : "Saved" : "Unable to save. Check the notification log.";
+            });
+        };
+        const status = (text: string): void => { message.textContent = text; };
+        if (definition.render) { root.append(definition.render(value, persist, status, tools)); continue; }
+        if (definition.list) { root.append(listSetting(definition.label, definition.list, value, `${id}-${key}.json`, persist, status)); continue; }
         let control: HTMLElement;
         if (definition.options) {
             const select = dropdown(definition.label, [{ options: definition.options }], String(value), next => {

@@ -40,6 +40,7 @@ export interface Bridge {
     branding?(videoId: string): Promise<unknown>;
     openUri?(uri: string): Promise<void>;
     translate?(request: { text: string; from: string; to: string }): Promise<unknown>;
+    fetchSound?(url: string): Promise<unknown>;
     updateStatus?(force: boolean): Promise<unknown>;
     updateInstall?(): Promise<unknown>;
     updateSkip?(version: string): Promise<void>;
@@ -50,6 +51,8 @@ export interface SettingDefinition {
     min?: number;
     max?: number;
     options?: readonly string[];
+    list?: readonly string[];
+    render?(value: SettingValue, save: (next: SettingValue) => void, notify: (message: string) => void, tools: Pick<Bridge, "fetchSound">): HTMLElement;
 }
 export interface PluginContext {
     settings: Readonly<Record<string, SettingValue>>;
@@ -93,6 +96,8 @@ export interface ContextAction {
     id: string;
     label: string;
     after?: string;
+    last?: boolean;
+    danger?: boolean;
     selector?: string;
     icon?: IconName;
     matches(target: HTMLElement): boolean;

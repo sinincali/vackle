@@ -66,6 +66,6 @@ export default {
             const watch = new MutationObserver(update); watch.observe(label, { childList: true, characterData: true, subtree: true }); update();
             return () => { watch.disconnect(); overlay.remove(); label.classList.remove("vackle-chip-hidden"); };
         });
-        await resources.style(".vackle-chip-hidden{color:transparent!important}.vackle-chip-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:0 4px;pointer-events:none}.vackle-chip-avatar{flex-shrink:0;border-radius:50%;object-fit:cover}.vackle-chip-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vackle-mention-avatar{display:inline-block;width:1em;height:1em;margin:-.25em .25em -.25em 0;border-radius:50%;object-fit:cover;vertical-align:middle}");
+        await resources.style(".vackle-chip-hidden{color:transparent!important}.vackle-chip-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:0 4px;pointer-events:none}.vackle-chip-avatar{flex-shrink:0;border-radius:50%;object-fit:cover;background:rgb(255 255 255 / .1);box-shadow:0 0 0 1px rgb(255 255 255 / .2)}.vackle-chip-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vackle-mention-avatar{display:inline-block;width:1em;height:1em;margin:-.25em .25em -.25em 0;border-radius:50%;object-fit:cover;vertical-align:middle;background:rgb(255 255 255 / .1);box-shadow:0 0 0 1px rgb(255 255 255 / .2)}");
     }
 } satisfies Plugin;

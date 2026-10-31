@@ -17,9 +17,8 @@
  */
 
 import type { Plugin } from "../../api/types";
+import { saveFile } from "../../components/saveFile";
 import { imageUrl } from "../reverseImageSearch";
-
-type Picker = (options: { suggestedName: string }) => Promise<{ createWritable(): Promise<{ write(data: Blob): Promise<void>; close(): Promise<void> }> }>;
 const image = (target: HTMLElement): HTMLImageElement | undefined =>
     target instanceof HTMLImageElement && !target.closest("[data-user-card-trigger]") && target.getBoundingClientRect().width >= 48 ? target : undefined;
 const originalOf = (img: HTMLImageElement): string | undefined => img.closest("[data-image-url]")?.getAttribute("data-image-url") ?? imageUrl(img.currentSrc || img.src);
@@ -41,20 +40,9 @@ export function fileName(alt: string, url: string | undefined): string {
 
 export async function saveImage(img: HTMLImageElement, notify: (message: string, level?: "info" | "error") => void): Promise<void> {
     const name = fileName(img.alt, originalOf(img));
-    const picker = (window as { showSaveFilePicker?: Picker }).showSaveFilePicker;
     try {
-        if (picker) {
-            const handle = await picker({ suggestedName: name });
-            const blob = await download(img);
-            const writable = await handle.createWritable(); await writable.write(blob); await writable.close();
-        } else {
-            const url = URL.createObjectURL(await download(img));
-            Object.assign(document.createElement("a"), { href: url, download: name }).click();
-            setTimeout(() => URL.revokeObjectURL(url), 10000);
-        }
-        notify("Image saved");
+        if (await saveFile(name, () => download(img))) notify("Image saved");
     } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
         notify(error instanceof Error ? error.message : String(error), "error");
     }
 }

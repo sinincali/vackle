@@ -23,15 +23,27 @@ interface Socket { sendTypingStart(conversationId: string): void; sendGuildTypin
 const icon = (silent: boolean): string => `<svg width="14" height="14" class="text-white/40 group-hover:text-white/70 transition-colors" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4.5 5h15A2.5 2.5 0 0 1 22 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-15A2.5 2.5 0 0 1 2 16.5v-9A2.5 2.5 0 0 1 4.5 5ZM5 8.5v2h2v-2H5Zm4 0v2h2v-2H9Zm4 0v2h2v-2h-2Zm4 0v2h2v-2h-2ZM7.5 13.5v2h9v-2h-9Z"/>${silent ? '<path d="M3 3l18 18" fill="none" stroke-width="2.5" stroke-linecap="round" style="stroke:var(--ui-text-accent,#ef5252)"/>' : ""}</svg>`;
 
 export default {
-    id: "silent-typing", name: "Silent Typing", description: "Hide that you are typing.",
+    id: "silent-typing", name: "Silent Typing", description: "Hide that you are typing, and optionally hide when others are typing.",
     version: "1.0.0", author: "Xrm0s and contributors", tags: ["Chat", "Privacy"], enabledByDefault: false,
     settings: {
         "is-enabled": { label: "Toggle functionality", default: true },
-        "show-icon": { label: "Show an icon for toggling the plugin", default: true }
+        "show-icon": { label: "Show an icon for toggling the plugin", default: true },
+        "hide-others": { label: "Hide when other people are typing", default: false }
     },
     start({ settings, setSetting, resources, api }) {
         const socket = flackleStore<Socket>("sendGuildTypingStart");
         if (!socket) throw new Error("Flackle's connection store was not found");
+        if (settings["hide-others"] === true) {
+            const store = socket as unknown as { setState(partial: unknown, replace?: boolean): void; getState(): Record<string, unknown> };
+            const original = store.setState;
+            const hidden = (partial: unknown, replace?: boolean): void => original((state: Record<string, unknown>) => {
+                const next = typeof partial === "function" ? partial(state) : partial;
+                return next && typeof next === "object" && "typingUsers" in next ? { ...next, typingUsers: {} } : next;
+            }, replace);
+            store.setState = hidden;
+            original({ typingUsers: {} });
+            resources.add(() => { if (store.setState === hidden) store.setState = original; });
+        }
         const silent = settings["is-enabled"] !== false;
         const toggle = (): Promise<void> => setSetting("is-enabled", !silent).then(() => api.notify(silent ? "Silent typing disabled!" : "Silent typing enabled!"));
         if (silent) {

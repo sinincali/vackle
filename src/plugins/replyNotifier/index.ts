@@ -18,10 +18,11 @@
 
 import type { Plugin } from "../../api/types";
 import { flackleExport, flackleMe, flackleStore } from "../../components/flackleStores";
+import { jumpToMessage, placeName } from "../../components/messageLinks";
 
 interface Sender { id?: string; username?: string; display_name?: string | null; avatar_url?: string | null; }
 export interface Message { id: string; type?: string; content?: string; attachments?: unknown[]; sender?: Sender; reply_to?: { sender_id?: string } | null; mention_ids?: string[]; mention_everyone?: boolean; }
-interface Messages { addMessage(key: string, message: Message): void; fetchMessageTarget(key: string, id: string): Promise<boolean | null>; }
+interface Messages { addMessage(key: string, message: Message): void; }
 interface Levels { notification_level?: string; muted_until?: string | null; }
 interface ServerSettings { settingsByServer: Record<string, Levels | undefined>; getChannelSetting(server: string, channel: string): Levels | undefined; }
 type Allowed = (levels: Record<string, unknown>, mentioned: boolean) => boolean;
@@ -46,18 +47,10 @@ export default {
         const notify = flackleExport<Notify>("notifyIncomingCall:", (value, name) => name === "notify" && typeof value === "function");
         const allowed = flackleExport<Allowed>("channelNotificationLevel", value => typeof value === "function" && String(value).includes("channelMutedUntil"));
         if (!messages || !levels || !notify || !allowed) throw new Error("Flackle's message or notification code was not found");
-        const servers = flackleStore<{ servers: { id: string; name?: string }[] }>("removeServer");
-        const channels = flackleStore<{ byServer: Record<string, { channels: { id: string; name?: string }[] } | undefined> }>("applyChannelCreated");
         const social = flackleStore<{ blockedUsers: { id: string }[] }>("removeFriendBySnowflake");
-        const jumps = flackleStore<{ requestJump(scope: string, id: string): void }>("requestJump");
-        const router = (): { push(path: string, options?: object): void } | undefined => (window as { next?: { router?: { push(path: string, options?: object): void } } }).next?.router;
         const seen = new Set<string>();
         const jump = async (key: string, server: string, channel: string, id: string): Promise<void> => {
-            const found = await messages.getState().fetchMessageTarget(key, id);
-            if (found === null) return;
-            if (!found) { api.notify("That message is no longer available", "error"); return; }
-            jumps?.getState().requestJump(`channel/${server}/${channel}`, id);
-            router()?.push(`/app/channels/${server}/${channel}#message-${id}`, { scroll: false });
+            if (!await jumpToMessage(key, server, channel, id)) api.notify("That message is no longer available", "error");
         };
         const check = (key: string, message: Message): void => {
             const me = flackleMe()?.id;
@@ -71,9 +64,7 @@ export default {
             const kind = alert(message, me, mentioned => allowed({ serverNotificationLevel: serverLevels?.notification_level, serverMutedUntil: serverLevels?.muted_until,
                 channelNotificationLevel: channelLevels?.notification_level, channelMutedUntil: channelLevels?.muted_until }, mentioned));
             if (kind === "none") return;
-            const serverName = servers?.getState().servers.find(entry => entry.id === server)?.name ?? "a server";
-            const channelName = channels?.getState().byServer[server]?.channels.find(entry => entry.id === channel)?.name;
-            const where = channelName ? `${serverName} #${channelName}` : serverName;
+            const where = placeName(server, channel);
             const name = message.sender?.display_name || message.sender?.username || "Someone";
             const content = message.content?.trim() || (message.attachments?.length ? "has sent an attachment" : "");
             if (kind === "ping") notify({ conversationId: key, conversationType: "guild", conversationName: where, senderDisplayName: name, messageContent: content });

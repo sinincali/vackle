@@ -56,7 +56,7 @@ export async function createSettingsPanel(manager: PluginManager, store: Setting
         const plugin = manager.plugins.find(entry => entry.id === id);
         if (!plugin) return;
         closeModal?.();
-        closeModal = openModal(document.querySelector('[role="dialog"][aria-label="Settings"]') ?? document.body, plugin.name, pluginSettings(manager, store, id, run), () => { closeModal = undefined; });
+        closeModal = openModal(document.querySelector('[role="dialog"][aria-label="Settings"]') ?? document.body, plugin.name, pluginSettings(manager, store, id, run, { ...bridge.fetchSound ? { fetchSound: bridge.fetchSound } : {} }), () => { closeModal = undefined; });
     };
     const render = (section: string): HTMLElement => {
         closeModal?.();

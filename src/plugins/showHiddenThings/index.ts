@@ -58,7 +58,7 @@ export default {
                 if (existing) return;
                 const icon = Object.assign(document.createElement("span"), { className: "inline-flex items-center shrink-0 text-amber-400/90", title: `Timed out until ${new Date(until).toLocaleString()}` });
                 icon.dataset.vackleTimeout = ""; icon.setAttribute("aria-label", "Timed out");
-                const svg = uiIcon("clock", 16); svg.classList.add("w-4", "h-4", "mb-0.5"); icon.append(svg);
+                const svg = uiIcon("clock", 16); svg.classList.add("w-4", "h-4"); svg.style.marginBottom = "4.5px"; icon.append(svg);
                 const stamp = header.querySelector(":scope > span.cursor-default"); if (stamp) stamp.before(icon); else header.append(icon);
             };
             api.observe("[data-message-id] .text-md.font-medium.text-white:is(button[data-user-card-trigger], span)", author => {
@@ -80,17 +80,18 @@ export default {
             const row = icon.closest<HTMLElement>("[data-message-id]")!;
             if (!senderOf(row).userId) return undefined;
             const label = Object.assign(document.createElement("span"), { className: "vackle-timeout-remaining" });
+            const slot = icon.parentElement?.children.length === 1 && icon.parentElement.matches("span") ? icon.parentElement : icon;
             const title = icon.title;
             const tick = (): void => {
                 const who = member(row); const left = Date.parse(who?.timed_out_until ?? "") - Date.now();
                 if (!(left > 0)) { label.remove(); icon.title = title; return; }
                 const text = countdown(left);
-                if (inline) { label.textContent = `${text} timeout remaining`; if (!label.isConnected) icon.after(label); }
+                if (inline) { label.textContent = `${text} timeout remaining`; if (!label.isConnected) slot.after(label); }
                 else icon.title = `${who?.nickname || who?.user?.display_name || who?.user?.username || "This user"}'s timeout ends in ${text}`;
             };
             ticks.add(tick); tick();
             return () => { ticks.delete(tick); label.remove(); icon.title = title; };
         });
-        await resources.style(".vackle-timeout-remaining{flex-shrink:0;margin-bottom:2px;margin-left:4px;color:rgb(242 63 67 / .75);font-size:14px;line-height:18px;white-space:nowrap}");
+        await resources.style('[data-message-id] span[aria-label="Timed out"]:not([data-vackle-timeout]) svg{margin-bottom:3.5px}.vackle-timeout-remaining{flex-shrink:0;margin-bottom:2.25px;margin-left:-1px;color:rgb(185 51 55);font-size:14px;line-height:18px;white-space:nowrap}');
     }
 } satisfies Plugin;
