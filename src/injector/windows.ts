@@ -33,6 +33,10 @@ interface ProcessInfo { pid: number; parent: number; path: string; }
 export async function processes(): Promise<ProcessInfo[]> {
     return powershell<ProcessInfo[]>("$ErrorActionPreference='Stop'; $items=@(Get-CimInstance Win32_Process | ForEach-Object { @{pid=[int]$_.ProcessId; parent=[int]$_.ParentProcessId; path=[string]$_.ExecutablePath} }); ConvertTo-Json -InputObject $items -Compress");
 }
+export async function hostWebViews(executableName: string): Promise<number[]> {
+    return powershell<number[]>("$ErrorActionPreference='Stop'; $session=(Get-Process -Id $PID).SessionId; $pattern='--webview-exe-name=\"?'+[regex]::Escape($env:VACKLE_EXE)+'\"?(\\s|$)'; $items=@(Get-CimInstance Win32_Process -Filter \"Name='msedgewebview2.exe'\" | Where-Object { $_.SessionId -eq $session -and $_.CommandLine -match $pattern -and -not (Get-Process -Id $_.ParentProcessId -ErrorAction SilentlyContinue) } | ForEach-Object { [int]$_.ProcessId }); ConvertTo-Json -InputObject $items -Compress",
+        { VACKLE_EXE: executableName });
+}
 export function descendant(pid: number, root: number, items: ProcessInfo[]): boolean {
     const visited = new Set<number>();
     while (!visited.has(pid)) {

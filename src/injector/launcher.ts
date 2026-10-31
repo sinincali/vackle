@@ -20,7 +20,7 @@ import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { readFile, rm, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { Cdp, flackleTarget, targets } from "./cdp";
 import { validateInstallation, type Installation } from "./detection";
@@ -29,7 +29,7 @@ import { clearStaleLock, verifyFiles } from "./installer";
 import { RendererSession } from "./rendererSession";
 import { repairShortcuts } from "./shortcuts";
 import { watchPictureInPicture } from "./pipWindow";
-import { processes, verifyPortOwner } from "./windows";
+import { hostWebViews, processes, verifyPortOwner } from "./windows";
 import { isRecord } from "../settings/schema";
 import { cleanStaged, type Updates } from "./updater";
 import { version } from "./version";
@@ -72,6 +72,15 @@ export async function relaunchedHost(executable: string, previousPid: number, la
         if (!updating && deps.now() - start >= 5000) return undefined;
     }
     return undefined;
+}
+async function clearWebViews(host: Installation): Promise<void> {
+    for (let attempt = 0; attempt < 40; attempt++) {
+        const left = await hostWebViews(basename(host.executable)).catch(() => []);
+        if (!left.length) return;
+        for (const pid of left) { try { process.kill(pid); } catch { } }
+        await delay(250);
+    }
+    throw new Error("Flackle's old WebView2 processes would not close. Restart your PC and open Flackle again.");
 }
 async function keepShortcuts(root: string, host: Installation): Promise<void> {
     try { const fixed = await repairShortcuts(root, host); if (fixed.length) console.info(`Pointed Flackle shortcuts back at Vackle: ${fixed.join(", ")}`); }
@@ -116,6 +125,7 @@ async function launchSession(root: string, updates?: Updates): Promise<"exit" | 
         const env: NodeJS.ProcessEnv = { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port} --remote-debugging-address=127.0.0.1 --disable-features=msEdgePipAlignedUI` };
         delete env.WEBVIEW2_WAIT_FOR_SCRIPT_DEBUGGER;
         delete env.WEBVIEW2_PIPE_FOR_SCRIPT_DEBUGGER;
+        await clearWebViews(host);
         let launchedStamp = await fileStamp(host.executable);
         child = spawn(host.executable, [], { cwd: host.directory, env, windowsHide: false, stdio: "ignore" });
         let launchError: Error | undefined;
