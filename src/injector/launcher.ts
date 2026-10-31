@@ -29,7 +29,7 @@ import { clearStaleLock, verifyFiles } from "./installer";
 import { RendererSession } from "./rendererSession";
 import { repairShortcuts } from "./shortcuts";
 import { watchPictureInPicture } from "./pipWindow";
-import { hostWebViews, processes, verifyPortOwner } from "./windows";
+import { hostWebViews, launchReport, processes, verifyPortOwner } from "./windows";
 import { isRecord } from "../settings/schema";
 import { cleanStaged, type Updates } from "./updater";
 import { version } from "./version";
@@ -81,6 +81,12 @@ async function clearWebViews(host: Installation): Promise<void> {
         await delay(250);
     }
     throw new Error("Flackle's old WebView2 processes would not close. Restart your PC and open Flackle again.");
+}
+async function report(host: Installation, port: number, hostPid: number, failures: Set<string>): Promise<void> {
+    console.info(`Problems while waiting: ${[...failures].join(" | ") || "none"}`);
+    console.info(`Vackle asked Flackle ${hostPid} for debug port ${port}`);
+    try { for (const line of await launchReport(basename(host.executable))) console.info(line); }
+    catch (error) { console.info(`Could not read process details: ${error instanceof Error ? error.message : error}`); }
 }
 async function keepShortcuts(root: string, host: Installation): Promise<void> {
     try { const fixed = await repairShortcuts(root, host); if (fixed.length) console.info(`Pointed Flackle shortcuts back at Vackle: ${fixed.join(", ")}`); }
@@ -139,6 +145,7 @@ async function launchSession(root: string, updates?: Updates): Promise<"exit" | 
         let acknowledged = false;
         let previousReceipt = "";
         let previousFailure = "";
+        const waitFailures = new Set<string>();
         for (;;) {
             while (!stopping && hostAlive()) {
                 if (launchError) throw launchError;
@@ -168,11 +175,13 @@ async function launchSession(root: string, updates?: Updates): Promise<"exit" | 
                     } else if (!acknowledged && Date.now() > deadline) throw new Error("Runtime handshake did not complete");
                 } catch (error) {
                     lastFailure = error instanceof Error ? error.message : String(error);
-                    if (Date.now() > deadline && !acknowledged) throw new Error(`Flackle runtime verification failed: ${lastFailure}`);
+                    if (!acknowledged) waitFailures.add(lastFailure);
+                    if (Date.now() > deadline && !acknowledged) { await report(host, port, hostPid, waitFailures); throw new Error(`Flackle runtime verification failed: ${lastFailure}`); }
                     if (acknowledged && lastFailure !== previousFailure) { console.error(`[Vackle:launcher] ${lastFailure}`); previousFailure = lastFailure; }
                 }
                 await delay(acknowledged ? 3000 : 250);
             }
+            if (!acknowledged && !stopping) await report(host, port, hostPid, waitFailures);
             if (!acknowledged && !stopping) throw new Error(`Flackle exited before loading Vackle: ${lastFailure}`);
             if (stopping) break;
             const next = await relaunchedHost(host.executable, hostPid, launchedStamp, pid => verifyPortOwner(port, pid).then(() => true));

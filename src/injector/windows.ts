@@ -37,6 +37,13 @@ export async function hostWebViews(executableName: string): Promise<number[]> {
     return powershell<number[]>("$ErrorActionPreference='Stop'; $session=(Get-Process -Id $PID).SessionId; $pattern='--webview-exe-name=\"?'+[regex]::Escape($env:VACKLE_EXE)+'\"?(\\s|$)'; $items=@(Get-CimInstance Win32_Process -Filter \"Name='msedgewebview2.exe'\" | Where-Object { $_.SessionId -eq $session -and $_.CommandLine -match $pattern -and -not (Get-Process -Id $_.ParentProcessId -ErrorAction SilentlyContinue) } | ForEach-Object { [int]$_.ProcessId }); ConvertTo-Json -InputObject $items -Compress",
         { VACKLE_EXE: executableName });
 }
+export async function launchReport(executableName: string): Promise<string[]> {
+    return powershell<string[]>("$ErrorActionPreference='SilentlyContinue'; $exe=$env:VACKLE_EXE; $lines=@('Running as admin: '+([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)); $all=@(Get-CimInstance Win32_Process); " +
+        "foreach ($p in $all | Where-Object { $_.Name -eq $exe }) { $path = if ($p.ExecutablePath) { $p.ExecutablePath } else { 'path hidden (admin or other user)' }; $lines += \"Flackle $($p.ProcessId) parent=$($p.ParentProcessId) session=$($p.SessionId) $path\" }; " +
+        "foreach ($p in $all | Where-Object { $_.Name -eq 'msedgewebview2.exe' -and $_.CommandLine -match ('--webview-exe-name=\"?'+[regex]::Escape($exe)) -and $_.CommandLine -notmatch '--type=' }) { $flag = if ($p.CommandLine -match '--remote-debugging-port=(\\d+)') { 'debug port '+$Matches[1] } else { 'no debug flag' }; $lines += \"WebView2 $($p.ProcessId) parent=$($p.ParentProcessId): $flag\" }; " +
+        "$policy=@('HKLM:\\SOFTWARE\\Policies\\Microsoft\\Edge\\WebView2','HKCU:\\SOFTWARE\\Policies\\Microsoft\\Edge\\WebView2') | Where-Object { Test-Path $_ }; $lines += 'WebView2 policy: '+$(if ($policy) { $policy -join ', ' } else { 'none' }); ConvertTo-Json -InputObject $lines -Compress",
+        { VACKLE_EXE: executableName });
+}
 export function descendant(pid: number, root: number, items: ProcessInfo[]): boolean {
     const visited = new Set<number>();
     while (!visited.has(pid)) {
