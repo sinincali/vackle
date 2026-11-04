@@ -42,7 +42,7 @@ export class SettingsIntegration {
     private readonly click: (event: MouseEvent) => void;
     constructor(private readonly sections: SettingsNavigation[], private readonly render: (section: string) => HTMLElement) {
         this.click = event => {
-            const target = event.target instanceof Element ? event.target.closest<HTMLElement>('[role="tab"]') : null;
+            const target = event.target instanceof Element ? event.target.closest<HTMLElement>('[role="tab"], button:has(> .rounded-full)') : null;
             if (target && !target.closest("[data-vackle-navigation]") && this.dialog?.contains(target)) this.deactivate();
         };
         document.addEventListener("click", this.click, true);

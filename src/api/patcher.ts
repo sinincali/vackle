@@ -46,7 +46,7 @@ export class Patcher {
         };
     }
     private build(target: object, key: PropertyKey, chain: Chain, wraps: Wrap[]): void {
-        let replacement: (...args: unknown[]) => unknown = (...args) => Reflect.apply(chain.original, target, args) as unknown;
+        let replacement: (...args: unknown[]) => unknown = function (this: unknown, ...args) { return Reflect.apply(chain.original, this ?? target, args) as unknown; };
         for (const wrap of wraps) {
             const next: unknown = wrap(replacement);
             if (typeof next !== "function") throw new Error("Patch wrapper must return a function");

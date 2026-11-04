@@ -39,7 +39,7 @@ const contentOf = (row: Element): { id: string; content: string } | undefined =>
     }
     return undefined;
 };
-const iconMarkup = (active: boolean): string => `<svg width="14" height="14" class="text-white/40 group-hover:text-white/70 transition-colors"${active ? ' style="color:var(--ui-text-accent,#ef5252)"' : ""} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${uiIcon("translate").innerHTML}</svg>`;
+const iconMarkup = (active: boolean): string => `<svg class="w-3.5 h-3.5 text-[#727276] group-hover:text-[#B9B9BB] transition-colors"${active ? ' style="color:var(--ui-text-accent,#ef5252)"' : ""} viewBox="2.25 2.25 19.5 19.5" fill="currentColor" aria-hidden="true">${uiIcon("translate").innerHTML}</svg>`;
 
 export default {
     id: "translate", name: "Translate", description: "Translate messages with Google Translate.",

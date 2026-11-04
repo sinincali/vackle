@@ -32,16 +32,28 @@ function recentEmoji(count: number): string[] {
 }
 
 const graphemes = (text: string): string[] => [...new Intl.Segmenter().segment(text)].map(part => part.segment).filter(part => part.trim());
+const cornerReaction = 'button.context-menu-corner-action[aria-label^="React with "]';
+function reactionTarget(row: HTMLElement): { conversationId: string, messageId: string } | undefined {
+    let conversationId: unknown;
+    for (const props of fiberProps(row, 3)) if (typeof props.conversationId === "string" && props.canAddReactions !== false) conversationId = props.conversationId;
+    const messageId = row.dataset.messageId;
+    return typeof conversationId === "string" && messageId ? { conversationId, messageId } : undefined;
+}
 const emojiButton = "[data-vackle-quick] button, button:has(> img[src^=\"/emoji/\"]):not([data-message-id] *)";
 
 export default {
     id: "more-quick-reactions", name: "More Quick Reactions", description: "Adds your favorite and most used emoji to the message hover bar for one-click reactions. Right-click an emoji in the picker to favorite it.",
     version: "1.0.0", author: "Xrm0s and contributors", tags: ["Chat", "Shortcuts"], enabledByDefault: false,
-    settings: { favorites: { label: "Favorite emoji (always shown first)", default: "" } },
+    settings: {
+        favorites: { label: "Favorite emoji (always shown first)", default: "" },
+        "context-menu": { label: "Show your quick reactions on the right-click menu instead of Flackle's", default: false }
+    },
     async start({ settings, setSetting, resources, api }) {
         const favorites = [...new Set(graphemes(String(settings.favorites ?? "")))];
-        let closeMenu: (() => void) | undefined;
+        const quick = (): string[] => [...new Set([...favorites, ...recentEmoji(16)])];
+        let closeMenu: (() => void) | undefined, clickedRow: HTMLElement | null = null;
         const menu = (event: MouseEvent): void => {
+            clickedRow = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-message-id]") : null;
             const button = event.target instanceof Element ? event.target.closest(emojiButton) : null;
             const emoji = button?.querySelector<HTMLImageElement>('img[src^="/emoji/"]')?.alt;
             if (!emoji) return;
@@ -60,12 +72,10 @@ export default {
         api.observe('[data-message-id] div[class~="-top-3"] > span.inline-flex > button[aria-label="Add reaction"]', add => {
             const row = add.closest<HTMLElement>("[data-message-id]"); const anchor = add.parentElement;
             if (add.closest("[data-vackle-quick]")) return;
-            let conversationId: unknown;
-            for (const props of row ? fiberProps(row, 3) : []) if (typeof props.conversationId === "string" && props.canAddReactions !== false) conversationId = props.conversationId;
-            const messageId = row?.dataset.messageId;
-            if (typeof conversationId !== "string" || !messageId || !anchor) return;
-            const conversation = conversationId;
-            const buttons = [...new Set([...favorites, ...recentEmoji(16)])].slice(0, Math.max(3, favorites.length)).map(emoji => {
+            const target = row && reactionTarget(row);
+            if (!target || !anchor) return;
+            const { conversationId: conversation, messageId } = target;
+            const buttons = quick().slice(0, Math.max(3, favorites.length)).map(emoji => {
                 const wrapper = anchor.cloneNode(true) as HTMLElement; const button = wrapper.querySelector("button")!; wrapper.dataset.vackleQuick = "";
                 button.setAttribute("aria-label", `React with ${emoji}`); button.title = `React with ${emoji}`;
                 const image = Object.assign(document.createElement("img"), { src: emojiUrl(emoji), alt: emoji, className: "vackle-quick-reaction", draggable: false });
@@ -76,6 +86,18 @@ export default {
             });
             anchor.before(...buttons);
             return () => { for (const button of buttons) button.remove(); };
+        });
+        if (settings["context-menu"]) api.observe(cornerReaction, button => {
+            const emoji = quick()[[...document.querySelectorAll(cornerReaction)].indexOf(button)];
+            const target = clickedRow && reactionTarget(clickedRow); const image = button.querySelector("img");
+            if (!emoji || !target || !image) return;
+            image.addEventListener("error", () => image.replaceWith(Object.assign(document.createElement("span"), { className: "vackle-quick-reaction", textContent: emoji })), { once: true });
+            image.src = emojiUrl(emoji); image.alt = emoji; button.title = `React with ${emoji}`; button.setAttribute("aria-label", button.title);
+            button.addEventListener("click", event => {
+                event.stopPropagation();
+                messages.getState().toggleReaction(target.conversationId, target.messageId, emoji);
+                document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+            }, true);
         });
         await resources.style(".vackle-quick-reaction{width:18px;height:18px;color:#fff;font-size:16px;line-height:1}");
     }

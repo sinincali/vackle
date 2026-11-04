@@ -121,7 +121,10 @@
 .vackle-error:empty { display: none; }
 
 .vackle-search-row { display: flex; gap: 8px; margin-bottom: 20px; }
-.vackle-search-row input { flex: 1; }
+.vackle-search-box { position: relative; flex: 1; display: flex; }
+.vackle-search-row input { flex: 1; padding-right: 34px; }
+.vackle-search-clear { position: absolute; top: 50%; right: 10px; transform: translateY(-50%); display: flex; padding: 0; border: 0; background: none; color: #fff; cursor: pointer; }
+.vackle-search-clear[hidden] { display: none; }
 
 .vackle-dropdown { position: relative; flex-shrink: 0; }
 .vackle-dropdown-trigger { box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 140px; height: var(--vk-control); padding: 0 10px 0 12px; border: 0; border-radius: var(--vk-radius); background: var(--vk-field); color: var(--ui-text-primary); font: inherit; font-size: 14px; cursor: pointer; transition: box-shadow var(--vk-ease); }

@@ -20,6 +20,7 @@ import type { Bridge } from "../api/types";
 import type { PluginManager } from "../core/pluginManager";
 import type { SettingsStore } from "../settings/settingsStore";
 import { dropdown } from "./dropdown";
+import { uiIcon } from "./icons";
 import { listSetting } from "./listSetting";
 import { button, element, heading, onDispose, settingRow, settingsCog, syncToggle, toggle, type RunAction } from "./primitives";
 
@@ -40,7 +41,11 @@ export function pluginPage(manager: PluginManager, run: RunAction, openSettings:
     const filter = dropdown("Filter plugins", [{ options: ["All", "Enabled", "Disabled"] }], state.filter, value => { state.filter = value; applyFilters(); });
     const tags = [...new Set(manager.plugins.flatMap(plugin => plugin.tags ?? []))].sort();
     const tagFilter = dropdown("Filter by tag", [{ options: ["All tags", ...tags] }], state.tags[0] ?? "All tags", value => { state.tags = value === "All tags" ? [] : [value]; applyFilters(); });
-    const tools = element("div", "vackle-search-row"); tools.append(search, filter.root);
+    const clear = element("button", "vackle-search-clear"); clear.type = "button"; clear.setAttribute("aria-label", "Clear search");
+    clear.append(uiIcon("close", 14)); clear.hidden = !search.value;
+    clear.addEventListener("click", () => { state.query = search.value = ""; clear.hidden = true; applyFilters(); search.focus(); });
+    const searchBox = element("div", "vackle-search-box"); searchBox.append(search, clear);
+    const tools = element("div", "vackle-search-row"); tools.append(searchBox, filter.root);
     if (tags.length) tools.append(tagFilter.root);
     const list = element("div", "vackle-plugin-list");
     const plugins = manager.plugins.sort((a, b) => a.name.localeCompare(b.name));
@@ -84,9 +89,9 @@ export function pluginPage(manager: PluginManager, run: RunAction, openSettings:
         cards.set(plugin.id, card); list.append(card);
     }
     const empty = element("div", "vackle-empty", "No plugins match your search.");
-    empty.append(button("Clear filters", () => { state.query = search.value = ""; state.filter = filter.value = "All"; state.tags = []; tagFilter.value = "All tags"; applyFilters(); }));
+    empty.append(button("Clear filters", () => { state.query = search.value = ""; clear.hidden = true; state.filter = filter.value = "All"; state.tags = []; tagFilter.value = "All tags"; applyFilters(); }));
     list.append(empty);
-    search.addEventListener("input", () => { state.query = search.value; applyFilters(); });
+    search.addEventListener("input", () => { state.query = search.value; clear.hidden = !search.value; applyFilters(); });
     const update = (): void => {
         for (const entry of manager.status()) {
             status.set(entry.id, entry);

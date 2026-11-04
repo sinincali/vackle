@@ -42,11 +42,8 @@ export default {
         resources.add(store.subscribe(seen)); window.addEventListener("focus", seen); resources.add(() => window.removeEventListener("focus", seen));
         resources.add(() => { if (store.getState().updateLastMessage === updateLastMessage) store.setState({ updateLastMessage: original }); });
         const quiet = (): boolean => Date.now() < quietUntil;
-        const play = HTMLMediaElement.prototype.play;
-        const ping = (media: HTMLMediaElement): boolean => quiet() && media.src.endsWith("/audio/new_notification.mp3");
-        const quietPlay = function (this: HTMLMediaElement): Promise<void> { return ping(this) ? Promise.resolve() : play.call(this); };
-        HTMLMediaElement.prototype.play = quietPlay;
-        resources.add(() => { if (HTMLMediaElement.prototype.play === quietPlay) HTMLMediaElement.prototype.play = play; });
+        const ping = (media: HTMLMediaElement): boolean => quiet() && (media.dataset.vackleSound === "new_notification" || media.src.endsWith("/audio/new_notification.mp3"));
+        api.patch(HTMLMediaElement.prototype, "play", play => function (this: HTMLMediaElement) { return ping(this) ? Promise.resolve() : play.call(this); });
         const time = Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, "currentTime");
         if (time?.set) {
             const rewind = { ...time, set(this: HTMLMediaElement, value: number) { if (!ping(this)) time.set!.call(this, value); } };

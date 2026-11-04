@@ -22,8 +22,13 @@ const css = `html[data-vackle-reduced-motion],html[data-vackle-reduced-motion] *
 
 export default {
     id: "reduced-motion", name: "Reduced Motion", description: "Turns off every animation and transition in Flackle, including smooth scrolling. Changes happen instantly.",
-    version: "1.2.0", author: "Xrm0s and contributors", tags: ["Accessibility", "Appearance"], enabledByDefault: false,
-    async start({ resources, log }) {
+    version: "1.3.0", author: "Xrm0s and contributors", tags: ["Accessibility", "Appearance"], enabledByDefault: false,
+    async start({ resources, log, api }) {
+        api.patch(Element.prototype, "animate", animate => function (this: Element, ...args: unknown[]) {
+            const animation = animate.apply(this, args) as Animation;
+            try { animation.finish(); } catch { }
+            return animation;
+        });
         document.documentElement.dataset.vackleReducedMotion = "";
         resources.add(() => { delete document.documentElement.dataset.vackleReducedMotion; });
         await resources.style(css);

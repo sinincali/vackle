@@ -20,7 +20,7 @@ import type { Plugin } from "../../api/types";
 import { flackleStore } from "../../components/flackleStores";
 
 interface Socket { sendTypingStart(conversationId: string): void; sendGuildTypingStart(serverId: string, channelId: string): void; }
-const icon = (silent: boolean): string => `<svg width="14" height="14" class="text-white/40 group-hover:text-white/70 transition-colors" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4.5 5h15A2.5 2.5 0 0 1 22 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-15A2.5 2.5 0 0 1 2 16.5v-9A2.5 2.5 0 0 1 4.5 5ZM5 8.5v2h2v-2H5Zm4 0v2h2v-2H9Zm4 0v2h2v-2h-2Zm4 0v2h2v-2h-2ZM7.5 13.5v2h9v-2h-9Z"/>${silent ? '<path d="M3 3l18 18" fill="none" stroke-width="2.5" stroke-linecap="round" style="stroke:var(--ui-text-accent,#ef5252)"/>' : ""}</svg>`;
+const icon = `<svg class="w-3.5 h-3.5 text-[#727276] group-hover:text-[#B9B9BB] transition-colors" viewBox="2 2 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M4.5 5h15A2.5 2.5 0 0 1 22 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-15A2.5 2.5 0 0 1 2 16.5v-9A2.5 2.5 0 0 1 4.5 5ZM5 8.5v2h2v-2H5Zm4 0v2h2v-2H9Zm4 0v2h2v-2h-2Zm4 0v2h2v-2h-2ZM7.5 13.5v2h9v-2h-9Z"/></svg>`;
 
 export default {
     id: "silent-typing", name: "Silent Typing", description: "Hide that you are typing, and optionally hide when others are typing.",
@@ -61,10 +61,11 @@ export default {
             const wrapper = anchor.parentElement!.cloneNode(false) as HTMLElement;
             const button = anchor.cloneNode(false) as HTMLButtonElement;
             const label = silent ? "Disable Silent Typing" : "Enable Silent Typing";
-            button.setAttribute("aria-label", label); button.title = label; button.setAttribute("aria-pressed", String(silent)); button.innerHTML = icon(silent);
+            button.setAttribute("aria-label", label); button.title = label; button.setAttribute("aria-pressed", String(silent)); button.innerHTML = icon;
             button.addEventListener("mousedown", event => event.preventDefault());
             button.addEventListener("click", () => void toggle().catch(error => api.notify(error instanceof Error ? error.message : String(error), "error")));
-            wrapper.append(button); anchor.parentElement!.after(wrapper);
+            wrapper.append(button);
+            (anchor.parentElement!.parentElement!.querySelector(':scope > :has(> button[aria-label$="Auto-Translate"])') ?? anchor.parentElement!).after(wrapper);
             return () => wrapper.remove();
         });
     }

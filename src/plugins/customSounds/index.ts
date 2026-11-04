@@ -233,7 +233,7 @@ export default {
     settings: {
         sounds: { label: "Sounds", default: "{}", render: (value, save, notify, tools) => soundSettings(value, save, notify, tools) }
     },
-    async start({ settings, resources, log }) {
+    async start({ settings, resources, api, log }) {
         const config = parseConfig(settings.sounds);
         const urls = new Map<string, string>();
         for (const [id, sound] of Object.entries(config)) {
@@ -241,13 +241,12 @@ export default {
             const blob = await readFile(id).catch(error => { log(`Could not load the custom ${id} sound`, error); return undefined; });
             if (blob) urls.set(id, URL.createObjectURL(blob));
         }
-        const prototype = HTMLMediaElement.prototype, original = prototype.play;
         const known = new Map<HTMLMediaElement, string>();
-        const play = function (this: HTMLMediaElement): Promise<void> {
+        api.patch(HTMLMediaElement.prototype, "play", original => function (this: HTMLMediaElement) {
             let id = known.get(this);
             if (!id) {
                 const match = /^\/audio\/([a-z_]+)\.mp3$/.exec(this.getAttribute("src") ?? "");
-                if (match && ids.has(match[1]!)) { id = match[1]!; known.set(this, id); }
+                if (match && ids.has(match[1]!)) { id = match[1]!; known.set(this, id); this.dataset.vackleSound = id; }
             }
             if (id) {
                 const sound = config[id]!;
@@ -257,10 +256,8 @@ export default {
                 this.volume = sound.volume / 100;
             }
             return original.call(this);
-        };
-        prototype.play = play;
+        });
         resources.add(() => {
-            if (prototype.play === play) prototype.play = original;
             for (const [audio, id] of known) { audio.src = `/audio/${id}.mp3`; audio.volume = 1; }
             for (const url of urls.values()) URL.revokeObjectURL(url);
         });

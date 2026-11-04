@@ -22,7 +22,7 @@ import { fiberProps } from "../../components/reactFiber";
 
 interface User { id: string; username?: string; display_name?: string | null; avatar_url?: string | null; }
 const prefix = "vackle-preview-";
-const eyeIcon = '<svg class="w-[0.825rem] h-[0.825rem] text-white/40 group-hover:text-white/70 transition-colors" viewBox="1 1 22 22" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 5C5.648 5 1 12 1 12s4.648 7 11 7 11-7 11-7-4.648-7-11-7Zm0 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"/><circle cx="12" cy="12" r="2"/></svg>';
+const eyeIcon = '<svg class="w-3.5 h-3.5 text-[#727276] group-hover:text-[#B9B9BB] transition-colors" viewBox="1 1 22 22" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M12 5C5.648 5 1 12 1 12s4.648 7 11 7 11-7 11-7-4.648-7-11-7Zm0 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8Z"/><circle cx="12" cy="12" r="2"/></svg>';
 
 export function conversationId(): string | undefined {
     for (const props of fiberProps(document.querySelector("[data-message-id]") ?? document.body, 3)) if (typeof props.conversationId === "string") return props.conversationId;
