@@ -77,7 +77,7 @@ jobs:
               if: github.repository == 'sinincali/vackle'
               run: |
                   gh release view devbuild > /dev/null 2>&1 || gh release create devbuild --target "$GITHUB_SHA" --title "DevBuild" --notes "Built automatically from main." --latest
-                  gh release upload devbuild --clobber dist/Vackle.exe dist/injector.cjs dist/renderer.js dist/extension.zip
+                  gh release upload devbuild --clobber dist/Vackle.exe dist/injector.cjs dist/renderer.js dist/extension.zip dist/Vackle.user.js dist/Vackle.meta.js
                   gh release upload devbuild --clobber dist/vackle-release.json
                   gh release edit devbuild --title "DevBuild $(git rev-parse --short HEAD)" --notes-file "$RUNNER_TEMP/notes.md" --latest
               env:

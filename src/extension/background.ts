@@ -17,10 +17,9 @@
  */
 
 import type { Settings } from "../api/types";
-import { fetchBranding } from "../injector/dearrow";
-import { translateText } from "../injector/translate";
 import { adblockEnabled } from "../injector/youtubeAdblock";
-import { defaults, isRecord, validateSettings } from "../settings/schema";
+import { isRecord } from "../settings/schema";
+import { createHandler } from "./handler";
 
 const adblock = { id: "youtube-adblock", js: ["adblock.js"], matches: ["https://www.youtube-nocookie.com/embed/*", "https://www.youtube.com/embed/*"], allFrames: true, runAt: "document_start", world: "MAIN" } as const;
 async function syncAdblock(settings: Settings): Promise<void> {
@@ -28,23 +27,7 @@ async function syncAdblock(settings: Settings): Promise<void> {
     if (adblockEnabled(settings) && !registered) await chrome.scripting.registerContentScripts([{ ...adblock, js: [...adblock.js], matches: [...adblock.matches] }]);
     if (!adblockEnabled(settings) && registered) await chrome.scripting.unregisterContentScripts({ ids: [adblock.id] });
 }
-async function handle(method: unknown, payload: unknown): Promise<unknown> {
-    if (method === "settings") {
-        const stored = (await chrome.storage.local.get("settings")).settings;
-        const settings = stored === undefined ? defaults() : validateSettings(stored);
-        await syncAdblock(settings);
-        return settings;
-    }
-    if (method === "save") {
-        const settings = validateSettings(payload);
-        await chrome.storage.local.set({ settings });
-        await syncAdblock(settings);
-        return null;
-    }
-    if (method === "translate") return translateText(payload);
-    if (method === "branding" && typeof payload === "string") return fetchBranding(payload);
-    throw new Error("Unknown bridge operation");
-}
+const handle = createHandler(async () => (await chrome.storage.local.get("settings")).settings, settings => chrome.storage.local.set({ settings }), syncAdblock);
 const flackle = (sender: ExtensionSender): boolean => {
     try { return sender.id === chrome.runtime.id && sender.frameId === 0 && new URL(sender.url ?? "").origin === "https://flackle.com"; }
     catch { return false; }

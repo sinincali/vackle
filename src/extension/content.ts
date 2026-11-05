@@ -16,29 +16,11 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { isRecord } from "../settings/schema";
+import { serve } from "./host";
 
-const channel = "vackle-extension";
-const post = (message: Record<string, unknown>): void => window.postMessage({ channel, ...message }, location.origin);
-const ask = async (method: string, payload: unknown): Promise<unknown> => {
+serve(async (method, payload) => {
     const response = await chrome.runtime.sendMessage({ method, payload });
     if (!Array.isArray(response)) throw new Error("Vackle's background script did not answer");
     if (typeof response[0] === "string") throw new Error(response[0]);
     return response[1];
-};
-let config: Promise<Record<string, unknown>> | undefined;
-const sendConfig = (): void => {
-    config ??= ask("settings", null).then(settings => ({ version: chrome.runtime.getManifest().version, hostVersion: "Web", session: crypto.randomUUID(), binding: "", settings }),
-        (error: unknown) => { config = undefined; throw error; });
-    config.then(value => post({ type: "config", config: value }), error => console.error("[Vackle:extension] Could not load settings:", error));
-};
-window.addEventListener("message", event => {
-    const data: unknown = event.data;
-    if (event.source !== window || !isRecord(data) || data.channel !== channel) return;
-    if (data.type === "ready") sendConfig();
-    if (data.type !== "request" || typeof data.method !== "string") return;
-    const id = data.id;
-    ask(data.method, data.payload).then(result => post({ type: "reply", id, error: null, result }),
-        (error: unknown) => post({ type: "reply", id, error: error instanceof Error ? error.message : String(error), result: null }));
-});
-sendConfig();
+}, chrome.runtime.getManifest().version);

@@ -19,7 +19,8 @@
 import { execFileSync } from "node:child_process";
 import { copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { buildOrWatchAll, commonOpts, IS_WATCH, rendererOpts, VERSION } from "./common.mjs";
+import { build } from "esbuild";
+import { buildOrWatchAll, commonOpts, define, header, IS_WATCH, pkg, rendererOpts, VERSION } from "./common.mjs";
 
 const embed = `["https://www.youtube-nocookie.com","https://www.youtube.com"].includes(location.origin)&&location.pathname.startsWith("/embed/")`;
 const insideFlackle = `(()=>{const a=location.ancestorOrigins;return(a&&a.length?a[a.length-1]:document.referrer?new URL(document.referrer).origin:"")==="https://flackle.com"})()`;
@@ -33,6 +34,46 @@ await buildOrWatchAll([
     { ...commonOpts, entryPoints: ["src/extension/content.ts"], outfile: "dist/extension/content.js", format: "iife", platform: "browser", target: "chrome120" },
     { ...commonOpts, entryPoints: ["src/extension/background.ts"], outfile: "dist/extension/background.js", format: "iife", platform: "browser", target: "chrome120" }
 ]);
+if (!IS_WATCH) {
+    const repository = pkg.vackle.repository;
+    const release = `https://github.com/${repository}/releases/download/devbuild`;
+    const meta = [
+        "// ==UserScript==",
+        "// @name         Vackle",
+        "// @description  Flackle client mod, userscript version",
+        `// @version      ${VERSION}`,
+        `// @author       ${repository.split("/")[0]}`,
+        `// @namespace    https://github.com/${repository}`,
+        `// @homepageURL  https://github.com/${repository}`,
+        `// @supportURL   https://github.com/${repository}/issues`,
+        `// @icon         https://raw.githubusercontent.com/${repository}/main/src/assets/vackle-128.png`,
+        "// @license      GPL-3.0-or-later",
+        "// @match        https://flackle.com/*",
+        "// @run-at       document-start",
+        "// @noframes",
+        "// @inject-into  page",
+        "// @sandbox      JavaScript",
+        "// @grant        GM_getValue",
+        "// @grant        GM_setValue",
+        "// @grant        GM_xmlhttpRequest",
+        "// @grant        unsafeWindow",
+        "// @connect      translate-pa.googleapis.com",
+        "// @connect      sponsor.ajay.app",
+        "// @connect      www.youtube.com",
+        `// @updateURL    ${release}/Vackle.meta.js`,
+        `// @downloadURL  ${release}/Vackle.user.js`,
+        "// ==/UserScript==",
+        ""
+    ].join("\n");
+    const bundle = async options => (await build({ ...options, banner: {}, write: false, define: { ...define, window: "unsafeWindow" } })).outputFiles[0].text;
+    const [host, page] = await Promise.all([
+        bundle({ ...commonOpts, entryPoints: ["src/extension/userscript.ts"], format: "iife", platform: "browser", target: "chrome120", inject: ["src/extension/gmFetch.ts"] }),
+        bundle({ ...rendererOpts, entryPoints: ["src/extension/page.ts"] })
+    ]);
+    await writeFile("dist/Vackle.meta.js", meta);
+    await writeFile("dist/Vackle.user.js", `${meta}\n${header}\n${host}${page}`);
+    console.info("Wrote dist/Vackle.user.js");
+}
 if (!IS_WATCH && process.platform === "win32") {
     await rm("dist/extension.zip", { force: true });
     execFileSync(join(process.env.SystemRoot ?? "C:\\Windows", "System32", "tar.exe"), ["-a", "-c", "-f", "dist/extension.zip", "-C", "dist/extension", ...await readdir("dist/extension")], { stdio: "inherit" });

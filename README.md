@@ -21,6 +21,12 @@ Download `Vackle.exe` from https://github.com/sinincali/vackle/releases/latest a
 
 Download `extension.zip` from the latest release and unzip it. Open `chrome://extensions` (`brave://extensions` in Brave), turn on Developer mode, click Load unpacked and pick the unzipped folder. To remove it, remove the extension.
 
+### Userscript (flackle.com with Tampermonkey or Violentmonkey)
+
+Install [Tampermonkey](https://www.tampermonkey.net) or [Violentmonkey](https://violentmonkey.github.io), then open https://github.com/sinincali/vackle/releases/download/devbuild/Vackle.user.js and click Install. It updates itself. In Chrome and Edge, turn on "Allow User Scripts" in the userscript manager's extension details. In Firefox, use Tampermonkey. Use either the extension or the userscript, not both.
+
+The userscript can't block ads in YouTube embeds, and its settings are separate from the extension's.
+
 ## Join our Support/Community Server
 
 https://flackle.com/invite/7VW8IXBE

@@ -90,7 +90,7 @@ export function githubFeed(repository: string): Feed {
         async changes(from, to) {
             const compare = await text(`https://api.github.com/repos/${repository}/compare/${from}...${to}`, "application/vnd.github+json");
             if (!isRecord(compare) || !Array.isArray(compare.commits)) throw new Error("GitHub returned an unexpected comparison");
-            return compare.commits.map(entry => isRecord(entry) && isRecord(entry.commit) && typeof entry.commit.message === "string" ? `- ${entry.commit.message.split("\n")[0]}` : "").filter(Boolean).reverse().join("\n");
+            return compare.commits.map(entry => isRecord(entry) && isRecord(entry.commit) && typeof entry.commit.message === "string" ? entry.commit.message.trim() : "").filter(Boolean).reverse().join("\n\n");
         }
     };
 }
