@@ -20,6 +20,7 @@ import type { Plugin } from "../../api/types";
 import { flackleExport, flackleMe, flackleStore } from "../../components/flackleStores";
 import { parseList } from "../../components/listSetting";
 import { jumpToMessage, placeName } from "../../components/messageLinks";
+import { escapeRegex } from "../../settings/schema";
 
 interface Message { id: string; type?: string; content?: string; sender?: { id?: string; username?: string; display_name?: string | null; avatar_url?: string | null }; mention_ids?: string[]; mention_everyone?: boolean; }
 interface Levels { notification_level?: string; muted_until?: string | null; }
@@ -27,10 +28,11 @@ interface ServerSettings { settingsByServer: Record<string, Levels | undefined>;
 type Allowed = (levels: Record<string, unknown>, mentioned: boolean) => boolean;
 type Notify = (notice: Record<string, unknown>) => void;
 
-const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const patterns = new Map<string, RegExp>();
+const pattern = (word: string): RegExp => patterns.get(word) ?? patterns.set(word, new RegExp(`(^|[^\\p{L}\\p{N}_])${escapeRegex(word)}(?=$|[^\\p{L}\\p{N}_])`, "iu")).get(word)!;
 export const parseKeywords = (value: unknown): string[] => [...new Set(parseList(value).map(([word = ""]) => word.trim().toLowerCase()).filter(Boolean))];
 export function matchKeyword(content: string, keywords: readonly string[]): string | undefined {
-    return keywords.find(word => new RegExp(`(^|[^\\p{L}\\p{N}_])${escape(word)}(?=$|[^\\p{L}\\p{N}_])`, "iu").test(content));
+    return keywords.find(word => pattern(word).test(content));
 }
 
 export default {

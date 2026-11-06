@@ -25,6 +25,8 @@ interface Messages { cache: Record<string, { messages: { nonce?: unknown; conten
 type Transform = (text: string) => string;
 
 const transforms = new Set<Transform>();
+export const outsideCode = (text: string, transform: Transform): string =>
+    text.split(/(```[\s\S]*?(?:```|$)|`[^`\n]+`)/).map((part, index) => index % 2 ? part : transform(part)).join("");
 let unpatch: (() => void) | undefined;
 
 function patch(): () => void {
@@ -42,7 +44,7 @@ function patch(): () => void {
         const content = args[index];
         if (typeof content === "string" && content) {
             let next = content;
-            for (const transform of transforms) { try { next = transform(next); } catch (error) { console.error("[Vackle] Outgoing rewrite failed", error); } }
+            for (const transform of transforms) { try { next = outsideCode(next, transform); } catch (error) { console.error("[Vackle] Outgoing rewrite failed", error); } }
             if (next !== content) { args = [...args]; args[index] = next; rewrite(args[index + 1], next); }
         }
         forward(...args);

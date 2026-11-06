@@ -26,6 +26,8 @@ import { log } from "./utils/logger";
 import { Extensions } from "./api/extensions";
 import { Themes } from "./core/themes";
 import { UpdatePrompt } from "./core/updates";
+import { mobileMode } from "./core/mobileMode";
+import { Resources } from "./core/resources";
 
 export type Call = <T = void>(method: string, payload: unknown, timeout?: number) => Promise<T>;
 export function bootstrap(config: BootstrapConfig, send: (request: { id: number; method: string; payload: unknown }) => void, connect: (call: Call) => Bridge): void {
@@ -54,6 +56,7 @@ export function bootstrap(config: BootstrapConfig, send: (request: { id: number;
     const themes = new Themes(store, bridge);
     let panel: Awaited<ReturnType<typeof createSettingsPanel>> | undefined;
     let updates: UpdatePrompt | undefined;
+    const mobile = new Resources("mobile", bridge);
     let stopped = false;
     const handle: RuntimeHandle = {
         ready: false, version: config.version, hostVersion: config.hostVersion, session: config.session,
@@ -71,6 +74,7 @@ export function bootstrap(config: BootstrapConfig, send: (request: { id: number;
             stopped = true;
             await initialization.catch(error => log("core", "Stopping incomplete initialization", error));
             await manager.shutdown();
+            await mobile.dispose();
             await customCss.remove();
             await themes.dispose();
             await panel?.dispose();
@@ -103,6 +107,7 @@ export function bootstrap(config: BootstrapConfig, send: (request: { id: number;
         });
         if (stopped) return;
         extensions = new Extensions();
+        await mobileMode(extensions.scope("mobile", mobile), mobile).catch(error => log("mobile", "Mobile layout failed", error));
         await manager.initialize();
         panel = await createSettingsPanel(manager, store, customCss, themes, config, bridge, extensions);
         updates = new UpdatePrompt(bridge, extensions.notices);

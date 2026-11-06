@@ -19,13 +19,12 @@
 import type { Plugin } from "../../api/types";
 import { parseList } from "../../components/listSetting";
 import { rewriteOutgoing } from "../../components/outgoing";
-
-const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+import { escapeRegex } from "../../settings/schema";
 
 export const parseRules = (value: unknown): [string, string][] =>
     parseList(value).map(([from = "", to = ""]) => [from.trim(), to.trim()] as [string, string]).filter(([from]) => from);
 export function replaceText(text: string, rules: readonly [string, string][]): string {
-    for (const [from, to] of rules) text = text.replace(new RegExp(`(^|\\s)${escape(from)}(?=\\s|$)`, "gi"), (_, before: string) => before + to);
+    for (const [from, to] of rules) text = text.replace(new RegExp(`(^|\\s)${escapeRegex(from)}(?=\\s|$)`, "gi"), (_, before: string) => before + to);
     return text;
 }
 

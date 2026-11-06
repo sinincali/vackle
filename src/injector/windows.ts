@@ -18,6 +18,7 @@
 
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { escapeRegex } from "../settings/schema";
 
 const execute = promisify(execFile);
 export async function powershell<T>(script: string, variables: Record<string, string> = {}, timeout = 15000): Promise<T> {
@@ -98,7 +99,7 @@ export async function verifyPortOwner(port: number, hostPid: number): Promise<vo
         { VACKLE_PORT: String(port) }), processes()]);
     const host = items.find(item => item.pid === hostPid)?.path.split("\\").pop()?.toLowerCase();
     const hostWebView = (command: string): boolean => Boolean(host) && /\\msedgewebview2\.exe"?\s/i.test(command) &&
-        new RegExp(`--webview-exe-name="?${host!.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"?(\\s|$)`, "i").test(command) && new RegExp(`--remote-debugging-port=${port}(\\s|$)`).test(command);
+        new RegExp(`--webview-exe-name="?${escapeRegex(host!)}"?(\\s|$)`, "i").test(command) && new RegExp(`--remote-debugging-port=${port}(\\s|$)`).test(command);
     if (!listeners.length || listeners.some(listener => !["127.0.0.1", "::1"].includes(listener.address) ||
         !(descendant(listener.pid, hostPid, items) || hostWebView(listener.command)))) throw new Error("Debugging endpoint is not owned by launched Flackle on loopback");
 }

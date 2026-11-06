@@ -24,6 +24,7 @@ export function defaults(): Settings {
 export function isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+export const escapeRegex = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 export function identifier(value: unknown): value is string {
     return typeof value === "string" && /^[a-z][a-z0-9-]{0,63}$/.test(value);
 }

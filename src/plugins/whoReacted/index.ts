@@ -77,11 +77,13 @@ export default {
             stack.style.cssText = "display:inline-flex;align-items:center;flex-wrap:nowrap";
             let shown = "";
             const render = (): void => {
-                const users = (current()?.users ?? []).filter(user => typeof user?.id === "string");
-                const key = `${users.map(user => user.id).join(",")}:${current()?.count ?? 0}`;
-                if (!pill.isConnected || key === shown && stack.isConnected) return;
+                if (!pill.isConnected) return;
+                const reaction = current();
+                const users = (reaction?.users ?? []).filter(user => typeof user?.id === "string");
+                const key = `${users.map(user => user.id).join(",")}:${reaction?.count ?? 0}`;
+                if (key === shown && stack.isConnected) return;
                 shown = key;
-                const extra = Math.max(0, (current()?.count ?? users.length) - 5);
+                const extra = Math.max(0, (reaction?.count ?? users.length) - 5);
                 stack.replaceChildren(...users.slice(0, 5).map(user => {
                     const name = user.display_name || user.username || "Someone";
                     const url = avatarOf(user);

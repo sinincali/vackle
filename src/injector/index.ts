@@ -29,7 +29,7 @@ import { applyUpdate } from "./applyUpdate";
 import { selectInstallation, validateInstallation, type Installation } from "./detection";
 import { exists, readJson, safeTree } from "./files";
 import { clearStaleLock, dataDirectory, install, readManifest, uninstall, verifyFiles } from "./installer";
-import { handOff, launch, verifyRuntime } from "./launcher";
+import { handOff, launch, pidAlive, verifyRuntime } from "./launcher";
 import { installShortcuts, verifyShortcuts } from "./shortcuts";
 import { directoryFeed, githubFeed, readStaged, reusable, Updates, type RuntimeFile } from "./updater";
 import { commit, publicKey, repository, runtime, version } from "./version";
@@ -182,7 +182,7 @@ async function main(): Promise<void> {
         if (!staged || !Number.isSafeInteger(pid)) throw new Error("apply-update needs --stage and --pid");
         await safeTree(root, staged);
         const outcome = await applyUpdate(root, staged, pid, publicKey, {
-            alive: target => { try { process.kill(target, 0); return true; } catch (error) { return (error as NodeJS.ErrnoException).code === "EPERM"; } },
+            alive: pidAlive,
             launch: executable => { const child = spawn(executable, ["launch-hidden"], { detached: true, windowsHide: true, stdio: "ignore", cwd: root, env: { ...process.env, VACKLE_SUPERVISED: "1" } }); child.on("error", () => undefined); child.unref(); return child.pid ?? -1; },
             receipt: () => readJson(join(root, "runtime.json")),
             stop: async (launcher, host) => {
@@ -212,7 +212,7 @@ async function main(): Promise<void> {
         }
     } else throw new Error(`Unknown command: ${command}`);
 }
-const delegate = isSea() && !Reflect.get(globalThis, "__vackleDelegated") ? join(dirname(process.execPath), "injector.cjs") : undefined;
+const delegate = isSea() && !Reflect.get(globalThis, "__vackleDelegated") && process.env.LOCALAPPDATA && insideData(dataDirectory()) ? join(dirname(process.execPath), "injector.cjs") : undefined;
 if (delegate && existsSync(delegate)) {
     Reflect.set(globalThis, "__vackleDelegated", true);
     createRequire(delegate)(delegate);

@@ -67,7 +67,9 @@ export default {
                 return () => { headers.delete(author); author.parentElement?.querySelector(":scope > span[data-vackle-timeout]")?.remove(); };
             });
             api.observe('[data-message-id] span[aria-label="Timed out"]:not([data-vackle-timeout])', native => { native.closest("[data-message-id]")?.querySelector("span[data-vackle-timeout]")?.remove(); });
-            resources.add(members.subscribe(() => requestAnimationFrame(() => { for (const refresh of headers.values()) refresh(); })));
+            let queued = 0;
+            resources.add(members.subscribe(() => { queued ||= requestAnimationFrame(() => { queued = 0; for (const refresh of headers.values()) refresh(); }); }));
+            resources.add(() => cancelAnimationFrame(queued));
             resources.add(() => { for (const icon of document.querySelectorAll("span[data-vackle-timeout]")) icon.remove(); });
         }
         const style = String(settings["timeout-duration"] ?? "Next to the timeout icon");

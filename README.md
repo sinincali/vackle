@@ -27,6 +27,8 @@ Install [Tampermonkey](https://www.tampermonkey.net) or [Violentmonkey](https://
 
 The userscript can't block ads in YouTube embeds, and its settings are separate from the extension's.
 
+On phones, use Firefox (Android) or Safari with Tampermonkey and keep "Desktop site" off. Vackle switches to a phone layout by itself.
+
 ## Join our Support/Community Server
 
 https://flackle.com/invite/7VW8IXBE

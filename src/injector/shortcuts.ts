@@ -97,14 +97,15 @@ export async function installShortcuts(root: string, host: Installation, locatio
     await safeTree(root); await mkdir(root, { recursive: true });
     const previous = await receipt(root, locations);
     const candidates = await scanLinks(locations);
-    const paths = new Set(previous?.entries.map(entry => entry.path) ?? []);
+    const paths = new Set<string>();
+    for (const entry of previous?.entries ?? []) if (await exists(entry.path)) paths.add(entry.path);
     const adopted = new Set<string>();
     for (const candidate of candidates) {
         if (key(candidate.target) === key(host.executable)) paths.add(candidate.path);
         else if (vackleLaunch(candidate.arguments, root) && !paths.has(candidate.path)) { paths.add(candidate.path); adopted.add(candidate.path); }
     }
     const desktop = join(locations.desktop, "Flackle.lnk");
-    if (!await exists(desktop)) paths.add(desktop);
+    if (!previous && !await exists(desktop)) paths.add(desktop);
     if (![...paths].some(path => contains(locations.programs, path))) {
         const path = join(locations.programs, "Flackle (Vackle).lnk");
         if (await exists(path)) throw new Error("A Flackle (Vackle) shortcut already exists and is not owned by Vackle");

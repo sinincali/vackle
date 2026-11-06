@@ -17,14 +17,15 @@
  */
 
 import type { Plugin } from "../../api/types";
-import { flackleMe, flackleStore } from "../../components/flackleStores";
+import { flackleMe, flackleStore, flackleUser } from "../../components/flackleStores";
 import { fiberProps } from "../../components/reactFiber";
 
 interface User { id?: string; display_name?: string | null; username?: string; avatar_url?: string | null; }
 interface Conversation { id: string; type: string; name?: string | null; icon_url?: string | null; members?: { user?: User }[]; }
 interface Server { id: string; name: string; icon_url?: string | null; }
 interface Servers { servers: Server[]; settingsByServer: Record<string, { last_viewed_channel_id?: string } | undefined>; }
-interface Members { fetchMember(serverId: string, userId: string): Promise<unknown>; }
+interface Profile { username?: string; mutualServerIds?: string[]; }
+interface Profiles { getProfile(userId: string): Profile | undefined; fetchProfile(username: string, userId: string): Promise<Profile | null>; }
 interface Entry { name: string; image: string | null | undefined; path: string; }
 
 const nameOf = (group: Conversation): string => group.name || group.members?.map(member => member.user?.display_name || member.user?.username).filter(Boolean).join(", ") || "Group";
@@ -44,18 +45,13 @@ export default {
         if (settings["hide-flackle-mutuals"] === true) await resources.style('div.absolute:has(> button[aria-label*="mutual" i]){display:none!important}');
         const conversations = flackleStore<{ conversations: Conversation[] }>("setActiveConversation");
         const servers = flackleStore<Servers>("setServerNotificationLevel");
-        const members = flackleStore<Members>("fetchMentionedMembers");
-        if (!conversations || !servers || !members) throw new Error("Flackle's conversation, server or member store was not found");
-        const shared = new Map<string, Promise<Entry[]>>();
-        const mutualServers = (userId: string): Promise<Entry[]> => {
-            const cached = shared.get(userId);
-            if (cached) return cached;
+        const profileStore = flackleStore<Profiles>("fetchProfile");
+        if (!conversations || !servers || !profileStore) throw new Error("Flackle's conversation, server or profile store was not found");
+        const mutualServers = async (userId: string): Promise<Entry[]> => {
+            const username = profileStore.getState().getProfile(userId)?.username || flackleUser(userId)?.username;
+            const ids = username ? (await profileStore.getState().fetchProfile(username, userId))?.mutualServerIds ?? [] : [];
             const { servers: list, settingsByServer } = servers.getState();
-            const found: Promise<Entry[]> = Promise.all(list.map(async server => await members.getState().fetchMember(server.id, userId) ? [server] : []))
-                .then(results => results.flat().map(server => ({ name: server.name, image: server.icon_url, path: `/app/channels/${server.id}${settingsByServer[server.id]?.last_viewed_channel_id ? `/${settingsByServer[server.id]!.last_viewed_channel_id}` : ""}` })));
-            shared.set(userId, found);
-            found.catch(() => shared.delete(userId));
-            return found;
+            return list.filter(server => ids.includes(server.id)).map(server => ({ name: server.name, image: server.icon_url, path: `/app/channels/${server.id}${settingsByServer[server.id]?.last_viewed_channel_id ? `/${settingsByServer[server.id]!.last_viewed_channel_id}` : ""}` }));
         };
         let closeList: (() => void) | undefined;
         resources.add(() => closeList?.());

@@ -104,8 +104,14 @@ export default {
                     if (Math.abs(now.top - box.top) > .5) content.style.top = `${parseFloat(content.style.top) + box.top - now.top}px`;
                 }
                 for (const [pip, mirror] of mirrors) if (!seen.has(pip)) { mirror.remove(); mirrors.delete(pip); delete pip.dataset.vackleFolderPip; }
-                frame = placed.size ? requestAnimationFrame(place) : 0;
+                frame = placed.size && performance.now() < until ? requestAnimationFrame(place) : 0;
             };
+            let until = 0;
+            const kick = (): void => { until = performance.now() + 500; if (!frame && placed.size) frame = requestAnimationFrame(place); };
+            const scrolled = (event: Event): void => { if (event.target === document || event.target instanceof Node && (column.contains(event.target) || sidebar.contains(event.target))) kick(); };
+            const moves = ["transitionrun", "animationstart", "pointerover", "pointerout"];
+            for (const type of moves) rail.addEventListener(type, kick);
+            window.addEventListener("scroll", scrolled, true); window.addEventListener("resize", kick);
             let queued = false;
             const render = (): void => {
                 queued = false; originals.clear();
@@ -132,7 +138,7 @@ export default {
                 for (const content of previous) release(content);
                 if (groups.length !== sidebar.children.length || groups.some((group, index) => sidebar.children[index] !== group)) sidebar.replaceChildren(...groups);
                 sidebar.hidden = !groups.length;
-                cancelAnimationFrame(frame); place();
+                until = performance.now() + 500; cancelAnimationFrame(frame); place();
             };
             const schedule = (): void => { if (!queued) { queued = true; requestAnimationFrame(render); } };
             const forward = (event: MouseEvent): void => {
@@ -149,6 +155,8 @@ export default {
             render();
             return () => {
                 watcher.disconnect(); cancelAnimationFrame(frame);
+                for (const type of moves) rail.removeEventListener(type, kick);
+                window.removeEventListener("scroll", scrolled, true); window.removeEventListener("resize", kick);
                 for (const content of placed.keys()) release(content);
                 for (const pip of mirrors.keys()) delete pip.dataset.vackleFolderPip;
                 rail.setAttribute("data-rail-clip", "true");
