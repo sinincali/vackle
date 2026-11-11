@@ -41,6 +41,7 @@ export interface Bridge {
     openUri?(uri: string): Promise<void>;
     translate?(request: { text: string; from: string; to: string }): Promise<unknown>;
     fetchSound?(url: string): Promise<unknown>;
+    fetchImage?(url: string): Promise<unknown>;
     updateStatus?(force: boolean): Promise<unknown>;
     updateInstall?(): Promise<unknown>;
     updateSkip?(version: string): Promise<void>;
@@ -69,6 +70,7 @@ export interface ResourceScope {
     branding(videoId: string): Promise<Branding>;
     openUri(uri: string): Promise<void>;
     translate(text: string, from: string, to: string): Promise<Translation>;
+    image(url: string): Promise<Blob>;
     dispose(): Promise<void>;
 }
 export interface Branding { title: string | null; thumbnail: number | null; }

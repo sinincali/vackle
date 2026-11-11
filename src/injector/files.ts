@@ -40,14 +40,7 @@ export async function atomicWrite(path: string, content: string): Promise<void> 
     const temporary = `${path}.${randomUUID()}.tmp`;
     try {
         await writeFile(temporary, content, { encoding: "utf8", flag: "wx" });
-        for (let attempt = 0; ; attempt++) {
-            try { await rename(temporary, path); break; }
-            catch (error) {
-                const code = (error as NodeJS.ErrnoException).code;
-                if (attempt >= 7 || !["EPERM", "EACCES", "EBUSY"].includes(code ?? "")) throw error;
-                await delay(25 * 2 ** attempt);
-            }
-        }
+        await renameRetry(temporary, path);
     } finally { await rm(temporary, { force: true }); }
 }
 export async function renameRetry(from: string, to: string): Promise<void> {

@@ -25,11 +25,11 @@ import { setTimeout as delay } from "node:timers/promises";
 import { Cdp, flackleTarget, targets } from "./cdp";
 import { validateInstallation, type Installation } from "./detection";
 import { atomicWrite, exists, readJson, safeTree } from "./files";
-import { clearStaleLock, verifyFiles } from "./installer";
+import { clearStaleLock, lockOwner, readManifest, verifyFiles } from "./installer";
 import { RendererSession } from "./rendererSession";
 import { repairShortcuts } from "./shortcuts";
 import { watchPictureInPicture } from "./pipWindow";
-import { hostWebViews, launchReport, processes, startUnelevated, verifyPortOwner } from "./windows";
+import { hostWebViews, isElevated, launchReport, processes, startUnelevated, verifyPortOwner } from "./windows";
 import { isRecord } from "../settings/schema";
 import { cleanStaged, type Updates } from "./updater";
 import { version } from "./version";
@@ -57,25 +57,25 @@ export function handOff(staged: string): void {
     console.info(`Handing off to the Vackle update in ${staged}`);
 }
 async function launcherAlive(root: string): Promise<boolean> {
-    const owner = await readJson(join(root, "launcher.lock")).catch(() => undefined);
-    const pid = isRecord(owner) && typeof owner.pid === "number" ? owner.pid : undefined;
-    return pid !== undefined && pid !== process.pid && (await processes()).some(item => item.pid === pid && /\\(vackle|node)\.exe$/i.test(item.path));
+    const owner = await lockOwner(root);
+    return owner !== undefined && owner !== process.pid;
 }
 export const pidAlive = (pid: number): boolean => { try { process.kill(pid, 0); return true; } catch (error) { return (error as NodeJS.ErrnoException).code === "EPERM"; } };
 const fileStamp = async (path: string): Promise<string> => { const info = await stat(path); return `${info.size}:${info.mtimeMs}`; };
 export async function relaunchedHost(executable: string, previousPid: number, launchedStamp: string, owns: (pid: number) => Promise<boolean>, deps = { processes, stamp: fileStamp, delay: (ms: number) => delay(ms), now: () => Date.now() }): Promise<number | undefined> {
     const start = deps.now();
-    for (let updating = false; deps.now() - start < 120000; await deps.delay(1000)) {
+    for (let replaced = false; deps.now() - start < 120000; await deps.delay(1000)) {
         const items = await deps.processes();
         for (const item of items) if (item.pid !== previousPid && item.path.toLowerCase() === executable.toLowerCase() && await owns(item.pid).catch(() => false)) return item.pid;
-        updating ||= items.some(item => item.parent === previousPid && !/msedgewebview2\.exe$/i.test(item.path)) || await deps.stamp(executable).then(stamp => stamp !== launchedStamp, () => true);
-        if (!updating && deps.now() - start >= 5000) return undefined;
+        replaced ||= await deps.stamp(executable).then(stamp => stamp !== launchedStamp, () => true);
+        const installing = items.some(item => item.parent === previousPid && !/msedgewebview2\.exe$/i.test(item.path));
+        if (!replaced && !installing && deps.now() - start >= 5000) return undefined;
     }
     return undefined;
 }
-async function clearWebViews(host: Installation): Promise<void> {
+async function clearWebViews(host: Installation, first: Promise<number[]>): Promise<void> {
     for (let attempt = 0; attempt < 40; attempt++) {
-        const left = await hostWebViews(basename(host.executable)).catch(() => []);
+        const left = attempt ? await hostWebViews(basename(host.executable)).catch(() => []) : await first;
         if (!left.length) return;
         for (const pid of left) { try { process.kill(pid); } catch { } }
         await delay(250);
@@ -93,9 +93,12 @@ async function keepShortcuts(root: string, host: Installation): Promise<void> {
     catch (error) { console.error("[Vackle:launcher] Shortcut repair failed:", error instanceof Error ? error.message : error); }
 }
 async function launchSession(root: string, updates?: Updates): Promise<"exit" | "restart" | { handoff: string }> {
-    const manifest = await verifyFiles(root);
-    let host = await validateInstallation(manifest.host.directory);
-    const running = (await processes()).find(item => item.path.toLowerCase() === host.executable.toLowerCase());
+    const listed = await readManifest(root);
+    const elevated = isElevated().catch(() => false);
+    const webviews = hostWebViews(basename(listed.host.executable)).catch(() => [] as number[]);
+    const [, validated, items] = await Promise.all([verifyFiles(root), validateInstallation(listed.host.directory), processes()]);
+    let host = validated;
+    const running = items.find(item => item.path.toLowerCase() === host.executable.toLowerCase());
     if (running) {
         for (const deadline = Date.now() + 60000; !await verifyRuntime(root).then(() => true, () => false); await delay(1000))
             if (Date.now() > deadline || !await launcherAlive(root)) throw new Error("Flackle is running without a verified Vackle session. Quit it completely, including its tray icon, and open Flackle again using the installed shortcut.");
@@ -121,7 +124,7 @@ async function launchSession(root: string, updates?: Updates): Promise<"exit" | 
     let hostPid = 0;
     let adopted = false;
     const hostAlive = (): boolean => adopted ? pidAlive(hostPid) : Boolean(child && child.exitCode === null && child.signalCode === null);
-    const pip = watchPictureInPicture();
+    let pip: ReturnType<typeof watchPictureInPicture> | undefined;
     const receiptPath = join(root, "runtime.json");
     try {
         await safeTree(root, receiptPath);
@@ -131,11 +134,11 @@ async function launchSession(root: string, updates?: Updates): Promise<"exit" | 
         const env: NodeJS.ProcessEnv = { ...process.env, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: `--remote-debugging-port=${port} --remote-debugging-address=127.0.0.1 --disable-features=msEdgePipAlignedUI` };
         delete env.WEBVIEW2_WAIT_FOR_SCRIPT_DEBUGGER;
         delete env.WEBVIEW2_PIPE_FOR_SCRIPT_DEBUGGER;
-        await clearWebViews(host);
+        await clearWebViews(host, webviews);
         let launchedStamp = await fileStamp(host.executable);
         let launchError: Error | undefined;
-        hostPid = await startUnelevated(host.executable, host.directory, env.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS!)
-            .catch(error => { console.info(`Could not start Flackle without admin: ${error instanceof Error ? error.message : error}`); return 0; });
+        hostPid = await elevated ? await startUnelevated(host.executable, host.directory, env.WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS!)
+            .catch(error => { console.info(`Could not start Flackle without admin: ${error instanceof Error ? error.message : error}`); return 0; }) : 0;
         if (hostPid) { adopted = true; console.info("Vackle is running as admin, so Flackle was started without admin."); }
         else {
             child = spawn(host.executable, [], { cwd: host.directory, env, windowsHide: false, stdio: "ignore" });
@@ -148,6 +151,7 @@ async function launchSession(root: string, updates?: Updates): Promise<"exit" | 
         let verifiedOwner = false;
         let lastFailure = "Renderer not yet available";
         let acknowledged = false;
+        let reported = false;
         let previousReceipt = "";
         let previousFailure = "";
         const waitFailures = new Set<string>();
@@ -177,14 +181,16 @@ async function launchSession(root: string, updates?: Updates): Promise<"exit" | 
                             previousReceipt = encoded;
                         }
                         if (!acknowledged) { console.info(`Verified: Vackle ${version} is ready inside the real Flackle desktop renderer. Keep this launcher running.`); acknowledged = true; }
+                        if (Array.isArray(state.plugins) && state.plugins.some(plugin => isRecord(plugin) && plugin.id === "picture-in-picture" && plugin.active === true)) pip ??= watchPictureInPicture();
+                        else { pip?.kill(); pip = undefined; }
                     } else if (!acknowledged && Date.now() > deadline) throw new Error("Runtime handshake did not complete");
                 } catch (error) {
                     lastFailure = error instanceof Error ? error.message : String(error);
                     if (!acknowledged) waitFailures.add(lastFailure);
-                    if (Date.now() > deadline && !acknowledged) { await report(host, port, hostPid, waitFailures); throw new Error(`Flackle runtime verification failed: ${lastFailure}`); }
+                    if (Date.now() > deadline && !acknowledged && !reported) { reported = true; await report(host, port, hostPid, waitFailures); console.error(`[Vackle:launcher] Still waiting for Flackle: ${lastFailure}`); }
                     if (acknowledged && lastFailure !== previousFailure) { console.error(`[Vackle:launcher] ${lastFailure}`); previousFailure = lastFailure; }
                 }
-                await delay(acknowledged ? 3000 : 250);
+                await delay(acknowledged || reported ? 3000 : 250);
             }
             if (!acknowledged && !stopping) await report(host, port, hostPid, waitFailures);
             if (!acknowledged && !stopping) throw new Error(`Flackle exited before loading Vackle: ${lastFailure}`);
@@ -199,7 +205,7 @@ async function launchSession(root: string, updates?: Updates): Promise<"exit" | 
             await keepShortcuts(root, host);
         }
     } finally {
-        pip.kill();
+        pip?.kill();
         process.removeListener("SIGINT", stop);
         process.removeListener("SIGTERM", stop);
         if (renderer) {

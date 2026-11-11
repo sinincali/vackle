@@ -24,5 +24,5 @@ if (config && location.origin === "https://flackle.com" && window.__TAURI_INTERN
     if (typeof binding !== "function") throw new Error("Vackle native bridge is unavailable");
     binding(JSON.stringify(request));
 }, call => ({ save: settings => call("save", settings), style: (id, text) => call("style", { id, text }), restart: () => call("restart", null), motion: reduce => call("motion", reduce),
-    branding: videoId => call<unknown>("branding", videoId), openUri: uri => call("uri", uri), translate: request => call<unknown>("translate", request), fetchSound: url => call<unknown>("sound", url, 30000),
+    branding: videoId => call<unknown>("branding", videoId), openUri: uri => call("uri", uri), translate: request => call<unknown>("translate", request), fetchSound: url => call<unknown>("sound", url, 30000), fetchImage: url => call<unknown>("image", url, 60000),
     updateStatus: force => call<unknown>("update-status", force, 30000), updateInstall: () => call<unknown>("update-install", null, 600000), updateSkip: version => call("update-skip", version) }));

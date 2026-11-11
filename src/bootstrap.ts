@@ -58,6 +58,7 @@ export function bootstrap(config: BootstrapConfig, send: (request: { id: number;
     let updates: UpdatePrompt | undefined;
     const mobile = new Resources("mobile", bridge);
     let stopped = false;
+    let release: (() => void) | undefined;
     const handle: RuntimeHandle = {
         ready: false, version: config.version, hostVersion: config.hostVersion, session: config.session,
         plugins: () => manager.status(),
@@ -72,6 +73,7 @@ export function bootstrap(config: BootstrapConfig, send: (request: { id: number;
         openSettings() { panel?.open(); },
         async shutdown() {
             stopped = true;
+            release?.();
             await initialization.catch(error => log("core", "Stopping incomplete initialization", error));
             await manager.shutdown();
             await mobile.dispose();
@@ -97,12 +99,9 @@ export function bootstrap(config: BootstrapConfig, send: (request: { id: number;
         if (!document.body) await new Promise<void>(resolve => document.addEventListener("DOMContentLoaded", () => resolve(), { once: true }));
         await themes.apply();
         await customCss.apply();
-        if (!document.querySelector('button[aria-label="Settings"]')) await new Promise<void>((resolve, reject) => {
-            const observer = new MutationObserver(() => {
-                if (!document.querySelector('button[aria-label="Settings"]')) return;
-                clearTimeout(timer); observer.disconnect(); resolve();
-            });
-            const timer = setTimeout(() => { observer.disconnect(); reject(new Error("Flackle navigation did not become available")); }, 45000);
+        if (!document.querySelector('button[aria-label="Settings"]')) await new Promise<void>(resolve => {
+            const observer = new MutationObserver(() => { if (document.querySelector('button[aria-label="Settings"]')) release?.(); });
+            release = () => { observer.disconnect(); resolve(); };
             observer.observe(document.body, { childList: true, subtree: true });
         });
         if (stopped) return;

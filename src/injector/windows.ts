@@ -78,6 +78,8 @@ public static class VackleUnelevated {
         } finally { CloseHandle(token); }
     }
 }`;
+export const isElevated = (): Promise<boolean> =>
+    powershell<boolean>("([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) | ConvertTo-Json");
 export async function startUnelevated(executable: string, directory: string, browserArguments: string): Promise<number> {
     return powershell<number>("$ErrorActionPreference='Stop'; if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { 0; return }; Add-Type -TypeDefinition $env:VACKLE_CS; Remove-Item Env:VACKLE_CS; [VackleUnelevated]::Start($env:VACKLE_EXE, $env:VACKLE_DIR)",
         { VACKLE_CS: unelevated, VACKLE_EXE: executable, VACKLE_DIR: directory, WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS: browserArguments }, 30000);
@@ -93,13 +95,23 @@ export function descendant(pid: number, root: number, items: ProcessInfo[]): boo
     }
     return false;
 }
+export function portListeners(table: string, port: number): { pid: number; address: string }[] {
+    return table.split(/\r?\n/).flatMap(line => {
+        const [proto, local = "", foreign = "", ...rest] = line.trim().split(/\s+/);
+        const match = /^\[?(.*?)\]?:(\d+)$/.exec(local); const pid = Number(rest.at(-1));
+        return proto === "TCP" && match && Number(match[2]) === port && /^(0\.0\.0\.0|\[::\]):0$/.test(foreign) && Number.isSafeInteger(pid) ? [{ pid, address: match[1]! }] : [];
+    });
+}
 export async function verifyPortOwner(port: number, hostPid: number): Promise<void> {
-    const [listeners, items] = await Promise.all([powershell<{ pid: number; address: string; command: string }[]>(
-        "$ErrorActionPreference='Stop'; $items=@(Get-NetTCPConnection -State Listen -LocalPort ([int]$env:VACKLE_PORT) | ForEach-Object { @{pid=[int]$_.OwningProcess; address=[string]$_.LocalAddress; command=[string](Get-CimInstance Win32_Process -Filter \"ProcessId=$($_.OwningProcess)\").CommandLine} }); ConvertTo-Json -InputObject $items -Compress",
-        { VACKLE_PORT: String(port) }), processes()]);
+    const [table, items] = await Promise.all([execute("netstat", ["-ano"], { windowsHide: true, maxBuffer: 16 * 1024 * 1024, timeout: 15000 }).then(result => result.stdout), processes()]);
+    const listeners = portListeners(table, port);
+    const strangers = listeners.filter(listener => !descendant(listener.pid, hostPid, items)).map(listener => listener.pid);
+    const commands = strangers.length ? await powershell<{ pid: number; command: string }[]>(
+        "$ErrorActionPreference='Stop'; $pids=$env:VACKLE_PIDS -split ','; $items=@(Get-CimInstance Win32_Process | Where-Object { $pids -contains [string]$_.ProcessId } | ForEach-Object { @{pid=[int]$_.ProcessId; command=[string]$_.CommandLine} }); ConvertTo-Json -InputObject $items -Compress",
+        { VACKLE_PIDS: strangers.join(",") }) : [];
     const host = items.find(item => item.pid === hostPid)?.path.split("\\").pop()?.toLowerCase();
     const hostWebView = (command: string): boolean => Boolean(host) && /\\msedgewebview2\.exe"?\s/i.test(command) &&
         new RegExp(`--webview-exe-name="?${escapeRegex(host!)}"?(\\s|$)`, "i").test(command) && new RegExp(`--remote-debugging-port=${port}(\\s|$)`).test(command);
     if (!listeners.length || listeners.some(listener => !["127.0.0.1", "::1"].includes(listener.address) ||
-        !(descendant(listener.pid, hostPid, items) || hostWebView(listener.command)))) throw new Error("Debugging endpoint is not owned by launched Flackle on loopback");
+        !(descendant(listener.pid, hostPid, items) || hostWebView(commands.find(entry => entry.pid === listener.pid)?.command ?? "")))) throw new Error("Debugging endpoint is not owned by launched Flackle on loopback");
 }

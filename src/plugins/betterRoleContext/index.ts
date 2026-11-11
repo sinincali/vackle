@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import type { Plugin } from "../../api/types";
+import type { Plugin, ResourceScope } from "../../api/types";
 import { copyText, roleFromElement, type FlackleRole } from "../../components/flackleRole";
 import { openModal } from "../../components/modal";
 import { openPopupMenu, type PopupMenuItem } from "../../components/popupMenu";
@@ -24,20 +24,20 @@ import { button, element } from "../../components/primitives";
 import { download, saveImage } from "../saveImage";
 
 type Notify = (message: string, level?: "info" | "error") => void;
-async function copyImage(image: HTMLImageElement, notify: Notify): Promise<void> {
+async function copyImage(image: HTMLImageElement, notify: Notify, resources: ResourceScope): Promise<void> {
     try {
         const canvas = Object.assign(document.createElement("canvas"), { width: image.naturalWidth, height: image.naturalHeight });
-        canvas.getContext("2d")!.drawImage(await createImageBitmap(await download(image)), 0, 0);
+        canvas.getContext("2d")!.drawImage(await createImageBitmap(await download(image, resources)), 0, 0);
         const png = await new Promise<Blob>((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Couldn't read the icon")), "image/png"));
         await navigator.clipboard.write([new ClipboardItem({ "image/png": png })]);
         notify("Icon copied");
     } catch (error) { notify(`Couldn't copy: ${error instanceof Error ? error.message : String(error)}`, "error"); }
 }
-function viewIcon(role: FlackleRole & { iconUrl: string }, host: Element, notify: Notify): void {
+function viewIcon(role: FlackleRole & { iconUrl: string }, host: Element, notify: Notify, resources: ResourceScope): void {
     const body = element("div", "vackle-role-icon");
     const image = element("img"); image.src = role.iconUrl; image.alt = `${role.name} role icon`; image.width = image.height = 128;
     const actions = element("div", "vackle-role-icon-actions");
-    actions.append(button("Copy", () => void copyImage(image, notify)), button("Download", () => void saveImage(image, notify), "", "import"));
+    actions.append(button("Copy", () => void copyImage(image, notify, resources)), button("Download", () => void saveImage(image, notify, resources), "", "import"));
     body.append(image, actions); openModal(host, role.name, body);
 }
 export default {
@@ -53,7 +53,7 @@ export default {
             const host = target.closest('[role="dialog"]') ?? document.body;
             const items: PopupMenuItem[] = [];
             if (role.color) { const color = role.color; items.push({ label: "Copy Role Color", icon: "color", run: () => copyText(color, api.notify) }); }
-            if (role.iconUrl) { const iconRole = { ...role, iconUrl: role.iconUrl }; items.push({ label: "View Role Icon", icon: "image", run: () => viewIcon(iconRole, host, api.notify) }); }
+            if (role.iconUrl) { const iconRole = { ...role, iconUrl: role.iconUrl }; items.push({ label: "View Role Icon", icon: "image", run: () => viewIcon(iconRole, host, api.notify, resources) }); }
             items.push({ label: "Copy Role ID", icon: "id", run: () => copyText(role.id, api.notify), separatorBefore: items.length > 0 });
             close?.(); close = openPopupMenu(event.clientX, event.clientY, items, host);
         };

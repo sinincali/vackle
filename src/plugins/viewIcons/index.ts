@@ -22,6 +22,7 @@ import { modalHost, openModal } from "../../components/modal";
 import { openExternal } from "../../components/openExternal";
 import { button, element } from "../../components/primitives";
 import { fiberProps } from "../../components/reactFiber";
+import { saveImage } from "../saveImage";
 
 interface Server { id: string; name: string; icon_url?: string | null; banner_url?: string | null; }
 interface Group { id: string; type: string; name?: string | null; icon_url?: string | null; }
@@ -44,6 +45,7 @@ export default {
             const body = element("div", "vackle-view-icon");
             const image = element("img"); image.src = url; image.alt = title;
             const actions = element("div", "vackle-actions"); actions.append(button("Open in Browser", () => openExternal(url, api.notify), "vackle-ghost"));
+            if (window.__VACKLE__?.plugins().some(plugin => plugin.id === "save-image" && plugin.active)) actions.append(button("Save Image", () => void saveImage(image, api.notify, resources), "vackle-ghost", "import"));
             body.append(image, actions);
             close?.(); close = openModal(host, title, body, () => { close = undefined; });
         };

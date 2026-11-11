@@ -7,7 +7,7 @@ Flackle client mod
 ## Features
 
 -   Easy to install: one `Vackle.exe` finds Flackle and sets everything up
--   48 built in plugins
+-   53 built in plugins
 -   Fairly lightweight despite the many inbuilt plugins
 -   Custom CSS and Themes: Inbuilt css editor with support to import any css files
 -   Safe updates: every release is signed, and a broken update is rolled back automatically
@@ -16,6 +16,8 @@ Flackle client mod
 ## Installing / Uninstalling
 
 Download `Vackle.exe` from https://github.com/sinincali/vackle/releases/latest and run it
+
+Vackle is made for a PC only you use. While Flackle is open with Vackle, other Windows accounts signed in on the same PC could reach your Flackle session.
 
 ### Browser extension (flackle.com in Chrome, Edge, Brave or Firefox)
 

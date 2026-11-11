@@ -20,7 +20,7 @@ import type { ContextAction } from "./types";
 import type { Notifications } from "./notifications";
 import { identifier } from "../settings/schema";
 import { log } from "../utils/logger";
-import { uiIcon } from "../components/icons";
+import { uiIcon, type IconName } from "../components/icons";
 import { openPopupMenu } from "../components/popupMenu";
 
 export class ContextMenus {
@@ -40,7 +40,8 @@ export class ContextMenus {
         if (!source) return;
         const matches = [...this.actions.values()].flatMap(action => {
             const target = source.closest<HTMLElement>(action.selector ?? "a,pre,code");
-            try { return target && action.matches(target) ? [{ action, target }] : []; } catch (error) { log("context", "Matcher failed", error); return []; }
+            const owner = source.closest("[data-user-card-trigger]");
+            try { return target && !(owner && owner !== target && target.contains(owner)) && action.matches(target) ? [{ action, target }] : []; } catch (error) { log("context", "Matcher failed", error); return []; }
         });
         if (!matches.length) return;
         this.clear();
@@ -63,11 +64,12 @@ export class ContextMenus {
                 button.removeAttribute("id");
                 button.dataset.vackleContextAction = action.id;
                 button.setAttribute("role", "menuitem");
-                const label = button.querySelector("span");
-                const iconSlot = template.querySelector(":scope > span:last-child:not(:first-child)")?.className || "shrink-0 ml-2";
-                if (label) { label.textContent = action.label; button.replaceChildren(label); } else button.textContent = action.label;
-                const glyph = action.submenu ? "arrow" : action.icon;
-                if (glyph) { const slot = document.createElement("span"); slot.className = iconSlot; const svg = uiIcon(glyph, 14); svg.classList.add("w-3.5", "h-3.5"); slot.append(svg); button.append(slot); }
+                const label = [...button.querySelectorAll("span")].find(span => span.textContent?.trim());
+                const lead = label?.previousElementSibling;
+                if (label) { label.textContent = action.label; lead?.replaceChildren(); button.replaceChildren(...lead ? [lead, label] : [label]); } else button.textContent = action.label;
+                const glyph = (name: IconName, ...classes: string[]): SVGSVGElement => { const svg = uiIcon(name, 14); svg.classList.add(...classes); return svg; };
+                if (action.icon) lead?.append(glyph(action.icon, "w-3.5", "h-3.5"));
+                if (action.submenu) button.append(glyph("arrow", "w-3", "h-3", "shrink-0"));
                 const submenu = action.submenu;
                 let popup: Element | null = null, closing: ReturnType<typeof setTimeout> | undefined;
                 const show = (): void => {

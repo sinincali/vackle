@@ -163,14 +163,14 @@
 .vackle-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 12px 0 20px; }
 .vackle-modal-header h2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 18px; line-height: 28px; font-weight: 600; }
 .vackle-modal-body { display: flex; flex-direction: column; gap: 20px; overflow-y: auto; padding: 4px 20px 20px; scrollbar-width: thin; }
-:is(.vackle-modal-body, .vackle-dropdown-list, #vackle-command-palette > div, .vackle-mutual-list, .vackle-css-editor) { scrollbar-width: thin; scrollbar-color: var(--ui-layer-bar-elevated) transparent; }
+:is(.vackle-modal-body, .vackle-dropdown-list, #vackle-command-palette .vackle-command-list, .vackle-mutual-list, .vackle-css-editor) { scrollbar-width: thin; scrollbar-color: var(--ui-layer-bar-elevated) transparent; }
 .vackle-plugin-summary { color: var(--ui-text-secondary); }
 .vackle-modal .vackle-plugin-meta { margin: -16px 0 4px; color: var(--ui-text-faint); font-size: 12px; line-height: 16px; }
 .vackle-modal .vackle-muted:empty:not([role=status]) { display: none; }
 .vackle-modal .vackle-muted[role=status] { min-height: 16px; }
 .vackle-input { box-sizing: border-box; height: var(--vk-control); min-width: 0; padding: 0 12px; border: 1px solid transparent; border-radius: var(--vk-radius); background: var(--vk-field); color: var(--ui-text-primary); font: inherit; font-size: 14px; outline: none; transition: box-shadow var(--vk-ease); }
 .vackle-input::placeholder { color: var(--ui-text-placeholder); }
-.vackle-input::-webkit-search-cancel-button { display: none; }
+:is(.vackle-input, #vackle-command-palette input)::-webkit-search-cancel-button { display: none; }
 :is(.vackle-input, .vackle-css-editor):hover:not(:focus) { box-shadow: 0 0 0 1px var(--vk-ring); }
 :is(.vackle-input, .vackle-css-editor):focus { box-shadow: 0 0 0 2px var(--vk-ring); }
 :is(.vackle-input, .vackle-css-editor, .vackle-button):disabled { opacity: .5; cursor: progress; }
@@ -289,11 +289,14 @@
 #vackle-command-palette::backdrop { background: #000a; }
 #vackle-command-palette input { box-sizing: border-box; flex-shrink: 0; width: 100%; height: 48px; padding: 0 16px; border: 0; border-bottom: 1px solid var(--vk-rule-raised); background: transparent; color: inherit; font: inherit; outline: none; }
 #vackle-command-palette input::placeholder { color: var(--ui-text-placeholder); }
-#vackle-command-palette > div { overflow-y: auto; padding: 6px; scrollbar-width: thin; }
-#vackle-command-palette button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--vk-radius); background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
-#vackle-command-palette button:is(:hover, :focus-visible) { background: var(--vk-hover); outline: none; }
+#vackle-command-palette .vackle-search-box { flex: none; }
+#vackle-command-palette input { padding-right: 40px; }
+#vackle-command-palette .vackle-search-clear { right: 16px; }
+#vackle-command-palette .vackle-command-list { overflow-y: auto; padding: 6px; scrollbar-width: thin; }
+#vackle-command-palette .vackle-command-list button { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--vk-radius); background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+#vackle-command-palette .vackle-command-list button:is(:hover, :focus-visible) { background: var(--vk-hover); outline: none; }
 #vackle-command-palette strong { font-weight: 500; }
-#vackle-command-palette button span { color: var(--ui-text-muted); font-size: 12px; line-height: 16px; }
+#vackle-command-palette .vackle-command-list button span { color: var(--ui-text-muted); font-size: 12px; line-height: 16px; }
 #vackle-command-palette p { margin: 0; padding: 10px; color: var(--ui-text-muted); }
 
 #vackle-notifications { position: fixed; top: 52px; left: 50%; z-index: 2147483647; display: grid; width: max-content; max-width: min(640px, calc(100vw - 3rem)); transform: translateX(-50%); pointer-events: none; font-family: inherit; }

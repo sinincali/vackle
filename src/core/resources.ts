@@ -58,6 +58,11 @@ export class Resources implements ResourceScope {
         if (typeof result?.text !== "string" || typeof result.sourceLanguage !== "string") throw new Error("Translation failed");
         return { sourceLanguage: result.sourceLanguage, text: result.text };
     }
+    async image(url: string): Promise<Blob> {
+        const result = await this.bridge.fetchImage?.(url) as { type?: unknown; data?: unknown } | null | undefined;
+        if (typeof result?.type !== "string" || typeof result.data !== "string") throw new Error("Could not download the image");
+        return new Blob([Uint8Array.from(atob(result.data), char => char.charCodeAt(0))], { type: result.type });
+    }
     async dispose(): Promise<void> {
         this.disposed = true;
         for (const cleanup of this.cleanups.reverse()) {

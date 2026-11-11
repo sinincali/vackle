@@ -20,12 +20,14 @@ import type { Command } from "./types";
 import type { Notifications } from "./notifications";
 import { identifier } from "../settings/schema";
 import { log } from "../utils/logger";
+import { uiIcon } from "../components/icons";
 
 export class Commands {
     private readonly registry = new Map<string, Command>();
     private palette: HTMLDialogElement | undefined;
     private search: HTMLInputElement | undefined;
     private list: HTMLElement | undefined;
+    private clear: HTMLButtonElement | undefined;
     private readonly keyboard: (event: KeyboardEvent) => void;
     constructor(private readonly notices: Notifications) {
         this.keyboard = event => { if (event.ctrlKey && event.shiftKey && event.code === "KeyP") { event.preventDefault(); this.open(); } };
@@ -35,7 +37,11 @@ export class Commands {
         if (this.palette) return;
         const palette = document.createElement("dialog"); palette.id = "vackle-command-palette"; palette.dataset.vackleRoot = ""; palette.setAttribute("aria-label", "Vackle commands");
         const search = document.createElement("input"); search.type = "search"; search.placeholder = "Search commands…"; search.setAttribute("aria-label", "Search Vackle commands");
-        const list = document.createElement("div");
+        const list = document.createElement("div"); list.className = "vackle-command-list";
+        const clear = document.createElement("button"); clear.type = "button"; clear.className = "vackle-search-clear"; clear.setAttribute("aria-label", "Clear search");
+        clear.append(uiIcon("close", 14));
+        clear.addEventListener("click", () => { search.value = ""; this.render(); search.focus(); });
+        const box = document.createElement("div"); box.className = "vackle-search-box"; box.append(search, clear);
         search.addEventListener("input", () => this.render());
         search.addEventListener("keydown", event => {
             if (event.key === "ArrowDown") { event.preventDefault(); list.querySelector<HTMLButtonElement>("button")?.focus(); }
@@ -46,8 +52,8 @@ export class Commands {
             const index = entries.indexOf(document.activeElement as HTMLButtonElement);
             if (["ArrowDown", "ArrowUp"].includes(event.key)) { event.preventDefault(); entries[(index + (event.key === "ArrowDown" ? 1 : -1) + entries.length) % entries.length]?.focus(); }
         });
-        palette.append(search, list); document.body.append(palette);
-        this.palette = palette; this.search = search; this.list = list;
+        palette.append(box, list); document.body.append(palette);
+        this.palette = palette; this.search = search; this.list = list; this.clear = clear;
     }
     register(owner: string, command: Command): () => void {
         const key = `${owner}:${command.id}`;
@@ -60,6 +66,7 @@ export class Commands {
     private render(): void {
         if (!this.list || !this.search) return;
         this.list.replaceChildren();
+        if (this.clear) this.clear.hidden = !this.search.value;
         const query = this.search.value.toLowerCase();
         for (const command of this.registry.values()) {
             if (!`${command.label} ${command.description}`.toLowerCase().includes(query)) continue;

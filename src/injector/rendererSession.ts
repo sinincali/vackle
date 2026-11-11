@@ -22,7 +22,7 @@ import { identifier, isRecord, validateSettings } from "../settings/schema";
 import { Cdp, type ProtocolEvent } from "./cdp";
 import { fetchBranding } from "./dearrow";
 import { openUri } from "./openUri";
-import { downloadSound } from "./soundDownload";
+import { downloadImage, downloadSound } from "./soundDownload";
 import { translateText } from "./translate";
 import { loadSettings, saveSettings } from "./settingsFile";
 import { adblockEnabled, attachFrame } from "./youtubeAdblock";
@@ -95,7 +95,7 @@ export class RendererSession {
         const payload = request.payload;
         const updates = this.updates;
         let staged: string | undefined;
-        const lookup = request.method === "branding" && typeof payload === "string" ? () => fetchBranding(payload) : request.method === "translate" ? () => translateText(payload) : request.method === "sound" ? () => downloadSound(payload)
+        const lookup = request.method === "branding" && typeof payload === "string" ? () => fetchBranding(payload) : request.method === "translate" ? () => translateText(payload) : request.method === "sound" ? () => downloadSound(payload) : request.method === "image" ? () => downloadImage(payload)
             : request.method === "update-status" && updates ? () => updates.status(payload === true)
             : request.method === "update-install" && updates && this.onHandoff ? async () => { staged = await updates.stage(); return null; } : undefined;
         if (lookup) {

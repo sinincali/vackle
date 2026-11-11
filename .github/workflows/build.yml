@@ -30,14 +30,14 @@ jobs:
                 shell: bash
 
         steps:
-            - uses: actions/checkout@v7
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
               with:
                   fetch-depth: 0
 
-            - uses: pnpm/action-setup@v6
+            - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115
 
             - name: Use Node.js 26.7.0
-              uses: actions/setup-node@v6
+              uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
               with:
                   node-version: 26.7.0
                   cache: "pnpm"

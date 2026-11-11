@@ -43,7 +43,7 @@ export default {
             return [...images.filter(image => image.matches(":hover")), ...images].map(source).find(Boolean);
         };
         api.contextMenu({
-            id: "search-image", label: "Search Image", after: "Copy Text", selector: "[data-message-id]",
+            id: "search-image", label: "Search Image", icon: "search", after: "Copy Text", selector: "[data-message-id]",
             matches: target => imageOf(target) !== undefined,
             submenu: target => searchItems(engines, imageOf(target) ?? "", api.notify, true)
         });

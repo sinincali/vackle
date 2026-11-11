@@ -53,14 +53,16 @@ export async function readManifest(root: string, folder = "installed"): Promise<
         Object.values(value.files).some(entry => typeof entry !== "string" || !/^[a-f0-9]{64}$/.test(entry))) throw new Error("Invalid installed file manifest");
     return value as unknown as Manifest;
 }
+export async function lockOwner(root: string): Promise<number | undefined> {
+    const owner = await readJson(join(root, "launcher.lock")).catch(() => undefined);
+    const pid = isRecord(owner) && typeof owner.pid === "number" ? owner.pid : undefined;
+    return pid !== undefined && (await processes()).some(item => item.pid === pid && /\\(vackle|node)\.exe$/i.test(item.path)) ? pid : undefined;
+}
 export async function clearStaleLock(root: string): Promise<void> {
     const path = join(root, "launcher.lock");
     await safeTree(root, path);
     if (!await exists(path)) return;
-    const owner = await readJson(path).catch(() => undefined);
-    const pid = isRecord(owner) && typeof owner.pid === "number" ? owner.pid : undefined;
-    const alive = pid !== undefined && (await processes()).some(item => item.pid === pid && /\\(vackle|node)\.exe$/i.test(item.path));
-    if (alive) throw new Error("Vackle launcher is already running. Quit Flackle completely, including its tray icon, and try again.");
+    if (await lockOwner(root) !== undefined) throw new Error("Vackle launcher is already running. Quit Flackle completely, including its tray icon, and try again.");
     await rm(path, { force: true });
 }
 async function checkFolder(root: string, folder: string, manifest: Manifest): Promise<void> {

@@ -20,14 +20,14 @@ import { uiIcon, type IconName } from "./icons";
 import { element } from "./primitives";
 
 export interface PopupMenuItem { label: string; icon: IconName; image?: string; run(): void; separatorBefore?: boolean; }
-const row = "w-full flex items-center gap-2 px-3 py-2 text-left text-sm transition-colors rounded-lg [&_svg]:text-inherit text-white/90 hover:bg-white/5 cursor-pointer justify-between";
+const row = "w-full flex items-center gap-2 px-2 py-1.5 text-left text-sm transition-colors squircle-rounded-[10px] [&_svg]:text-inherit text-white/90 hover:bg-white/5 cursor-pointer";
 export function openPopupMenu(x: number, y: number, items: readonly PopupMenuItem[], host: Element = document.body, flipX = x): () => void {
-    const menu = element("div", "fixed py-2 px-2 min-w-[240px] rounded-xl overflow-hidden bg-ui-bar shadow-[0_0_4px_rgba(0,0,0,0.15)] z-[310]");
+    const menu = element("div", "fixed py-2 px-2 min-w-[240px] squircle-rounded-xl overflow-hidden bg-ui-bar shadow-[0_0_4px_rgba(0,0,0,0.15)] z-[310]");
     menu.style.backgroundColor = "var(--ui-layer-chip)"; menu.setAttribute("role", "menu"); menu.dataset.vackleRoot = "";
     const leading = items.some(item => item.image);
     for (const item of items) {
         if (item.separatorBefore) {
-            const separator = element("div", "flex items-center px-3"); separator.setAttribute("role", "separator"); separator.style.height = "18px";
+            const separator = element("div", "flex items-center px-2"); separator.setAttribute("role", "separator"); separator.style.height = "18px";
             separator.append(element("div", "h-0.5 w-full rounded-full bg-white/5")); menu.append(separator);
         }
         const entry = element("button", row); entry.type = "button"; entry.setAttribute("role", "menuitem");
@@ -36,11 +36,11 @@ export function openPopupMenu(x: number, y: number, items: readonly PopupMenuIte
             const image = element("img", "shrink-0 w-[18px] h-[18px] rounded"); image.alt = ""; image.referrerPolicy = "no-referrer";
             const fallback = (): void => { image.replaceWith(uiIcon(item.icon, 18)); };
             image.addEventListener("error", fallback, { once: true });
-            entry.classList.remove("justify-between"); entry.append(image, label);
+            entry.append(image, label);
             if (item.image) image.src = item.image; else fallback();
         } else {
-            const icon = element("span", "shrink-0 ml-2"); icon.append(uiIcon(item.icon, 14));
-            entry.append(label, icon);
+            const icon = element("span", "shrink-0 w-4 flex items-center justify-center [&_svg]:overflow-visible"); icon.setAttribute("aria-hidden", "true"); icon.append(uiIcon(item.icon, 14));
+            entry.append(icon, label);
         }
         entry.addEventListener("click", () => { close(); item.run(); });
         menu.append(entry);

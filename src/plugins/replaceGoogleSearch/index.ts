@@ -43,6 +43,6 @@ export default {
         const base = { id: "search-text", after: "Copy Text", selector: "[data-message-id]", matches: (target: HTMLElement) => textOf(target).length > 0 };
         api.contextMenu(direct
             ? { ...base, label: `Search with ${direct[0]}`, icon: "search", run: (target: HTMLElement) => openExternal(direct[1] + encodeURIComponent(textOf(target)), api.notify) }
-            : { ...base, label: "Search Text", submenu: (target: HTMLElement) => searchItems(all, textOf(target), api.notify) });
+            : { ...base, label: "Search Text", icon: "search", submenu: (target: HTMLElement) => searchItems(all, textOf(target), api.notify) });
     }
 } satisfies Plugin;

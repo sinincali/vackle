@@ -39,7 +39,21 @@ export function audioType(bytes: Uint8Array): string | undefined {
     return undefined;
 }
 
-export async function downloadSound(payload: unknown): Promise<{ type: string; data: string }> {
+export function imageType(bytes: Uint8Array): string | undefined {
+    const text = (start: number, end: number): string => String.fromCharCode(...bytes.subarray(start, end));
+    if (bytes[0] === 0x89 && text(1, 4) === "PNG") return "image/png";
+    if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
+    if (text(0, 4) === "GIF8") return "image/gif";
+    if (text(0, 4) === "RIFF" && text(8, 12) === "WEBP") return "image/webp";
+    if (text(4, 12) === "ftypavif") return "image/avif";
+    return undefined;
+}
+interface Kind { accept: string; limit: number; detect(bytes: Uint8Array): string | undefined; tooBig: string; wrongType: string; }
+const sound: Kind = { accept: "audio/*", limit: maxBytes, detect: audioType, tooBig: "Sounds must be 1 MB or smaller", wrongType: "That link isn't an mp3, ogg, wav, flac or m4a file" };
+const picture: Kind = { accept: "image/*", limit: 8 * maxBytes, detect: imageType, tooBig: "Images must be 8 MB or smaller", wrongType: "That link isn't a png, jpg, gif, webp or avif image" };
+export const downloadSound = (payload: unknown): Promise<{ type: string; data: string }> => download(payload, sound);
+export const downloadImage = (payload: unknown): Promise<{ type: string; data: string }> => download(payload, picture);
+async function download(payload: unknown, kind: Kind): Promise<{ type: string; data: string }> {
     if (typeof payload !== "string" || payload.length > 2048) throw new Error("That link is not valid");
     let url: URL;
     try { url = new URL(payload.trim()); } catch { throw new Error("That link is not valid"); }
@@ -49,7 +63,7 @@ export async function downloadSound(payload: unknown): Promise<{ type: string; d
         const addresses = isIP(host) ? [host] : (await lookup(host, { all: true }).catch(() => [])).map(entry => entry.address);
         if (!addresses.length) throw new Error("That website could not be found");
         if (addresses.some(privateAddress)) throw new Error("Links to local or private addresses are not allowed");
-        const response = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(10000), headers: { accept: "audio/*" } });
+        const response = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(10000), headers: { accept: kind.accept } });
         if (response.status >= 300 && response.status < 400) {
             const next = response.headers.get("location");
             await response.body?.cancel();
@@ -57,7 +71,7 @@ export async function downloadSound(payload: unknown): Promise<{ type: string; d
             url = new URL(next, url); continue;
         }
         if (!response.ok) { await response.body?.cancel(); throw new Error(`That link returned an error (${response.status})`); }
-        if (Number(response.headers.get("content-length")) > maxBytes) { await response.body?.cancel(); throw new Error("Sounds must be 1 MB or smaller"); }
+        if (Number(response.headers.get("content-length")) > kind.limit) { await response.body?.cancel(); throw new Error(kind.tooBig); }
         const chunks: Uint8Array[] = []; let size = 0;
         const reader = response.body?.getReader();
         if (!reader) throw new Error("That link returned nothing");
@@ -65,12 +79,12 @@ export async function downloadSound(payload: unknown): Promise<{ type: string; d
             const { done, value } = await reader.read();
             if (done) break;
             size += value.byteLength;
-            if (size > maxBytes) { await reader.cancel(); throw new Error("Sounds must be 1 MB or smaller"); }
+            if (size > kind.limit) { await reader.cancel(); throw new Error(kind.tooBig); }
             chunks.push(value);
         }
         const bytes = Buffer.concat(chunks);
-        const type = audioType(bytes);
-        if (!type) throw new Error("That link isn't an mp3, ogg, wav, flac or m4a file");
+        const type = kind.detect(bytes);
+        if (!type) throw new Error(kind.wrongType);
         return { type, data: bytes.toString("base64") };
     }
     throw new Error("That link redirects too many times");
