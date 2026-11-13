@@ -18,6 +18,8 @@ concurrency:
 
 permissions:
     contents: write
+    id-token: write
+    attestations: write
 
 env:
     FORCE_COLOR: true
@@ -33,6 +35,7 @@ jobs:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
               with:
                   fetch-depth: 0
+                  persist-credentials: false
 
             - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115
 
@@ -65,18 +68,31 @@ jobs:
             - name: Build and sign
               run: |
                   [ -n "$SIGNING_KEY" ] || { echo "The VACKLE_SIGNING_KEY secret is missing"; exit 1; }
+                  trap 'rm -f "$VACKLE_SIGNING_KEY"' EXIT
                   printf '%s\n' "$SIGNING_KEY" > "$VACKLE_SIGNING_KEY"
                   pnpm build
-                  rm -f "$VACKLE_SIGNING_KEY"
               env:
                   SIGNING_KEY: ${{ secrets.VACKLE_SIGNING_KEY }}
                   VACKLE_SIGNING_KEY: ${{ runner.temp }}/signing-key.pem
                   VACKLE_NOTES_FILE: ${{ runner.temp }}/notes.md
 
+            - name: Attest build provenance
+              if: github.repository == 'sinincali/vackle'
+              uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
+              with:
+                  subject-path: |
+                      dist/Vackle.exe
+                      dist/injector.cjs
+                      dist/renderer.js
+                      dist/extension.zip
+                      dist/Vackle.user.js
+                      dist/vackle-release.json
+
             - name: Upload DevBuild as release
               if: github.repository == 'sinincali/vackle'
               run: |
                   gh release view devbuild > /dev/null 2>&1 || gh release create devbuild --target "$GITHUB_SHA" --title "DevBuild" --notes "Built automatically from main." --latest
+                  gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/devbuild" -f sha="$GITHUB_SHA" -F force=true > /dev/null
                   gh release upload devbuild --clobber dist/Vackle.exe dist/injector.cjs dist/renderer.js dist/extension.zip dist/Vackle.user.js dist/Vackle.meta.js
                   gh release upload devbuild --clobber dist/vackle-release.json
                   gh release edit devbuild --title "DevBuild $(git rev-parse --short HEAD)" --notes-file "$RUNNER_TEMP/notes.md" --latest

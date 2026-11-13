@@ -17,9 +17,11 @@
  */
 
 import { spawn } from "node:child_process";
+import { join } from "node:path";
 import { isAppUri } from "../core/appUri";
+import { windowsDirectory } from "./windows";
 
 export function openUri(uri: string): void {
     if (!isAppUri(uri)) throw new Error("Unsupported app link");
-    spawn("explorer.exe", [uri], { detached: true, stdio: "ignore", windowsHide: true }).unref();
+    spawn(join(windowsDirectory(), "explorer.exe"), [uri], { detached: true, stdio: "ignore", windowsHide: true }).unref();
 }

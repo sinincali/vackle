@@ -17,7 +17,7 @@
  */
 
 import { createHash, createPrivateKey, createPublicKey, sign, verify } from "node:crypto";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import { buildOrWatchAll, commonOpts, define, gitHash, IS_WATCH, pkg, rendererOpts, RUNTIME, VERSION } from "./common.mjs";
 
@@ -31,8 +31,36 @@ else {
         assets: { "injector.cjs": "dist/injector.cjs", "renderer.js": "dist/renderer.js" } }, null, 2));
     await writeFile("dist/runtime.txt", RUNTIME);
     execFileSync(process.execPath, ["--build-sea", "dist/sea.json"], { stdio: "inherit" });
+    await stripNodeSignature("dist/Vackle.exe");
+    const smoke = spawnSync("dist/Vackle.exe", ["build-smoke-test"], { encoding: "utf8", timeout: 30000 });
+    if (!/Unknown command: build-smoke-test/.test(smoke.stderr)) throw new Error(`Vackle.exe failed its smoke test: ${smoke.stderr || smoke.error}`);
     if (process.env.VACKLE_SIGNING_KEY) await signRelease(process.env.VACKLE_SIGNING_KEY);
     console.info(`Built Vackle ${VERSION} (${gitHash || "no commit"})`);
+}
+
+async function stripNodeSignature(path) {
+    const bytes = await readFile(path);
+    const optional = bytes.readUInt32LE(0x3c) + 24;
+    if (bytes.readUInt16LE(optional) !== 0x20b) throw new Error("Vackle.exe is not a 64-bit PE file");
+    const directory = optional + 112 + 4 * 8;
+    const size = bytes.readUInt32LE(directory + 4);
+    if (!size) return;
+    const tail = bytes.length - size;
+    if (bytes.readUInt32LE(tail) !== size || bytes.readUInt16LE(tail + 6) !== 2) throw new Error("Unexpected certificate layout in the SEA output");
+    const output = Buffer.from(bytes.subarray(0, tail));
+    output.writeUInt32LE(0, directory); output.writeUInt32LE(0, directory + 4);
+    output.writeUInt32LE(peChecksum(output, optional + 64), optional + 64);
+    await writeFile(path, output);
+}
+
+function peChecksum(bytes, field) {
+    let sum = 0;
+    for (let index = 0; index < bytes.length; index += 2) {
+        if (index === field || index === field + 2) continue;
+        sum += index + 1 < bytes.length ? bytes.readUInt16LE(index) : bytes[index];
+        sum = (sum & 0xffff) + (sum >>> 16);
+    }
+    return ((sum & 0xffff) + (sum >>> 16) + bytes.length) >>> 0;
 }
 
 async function signRelease(keyPath) {

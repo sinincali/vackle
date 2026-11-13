@@ -175,7 +175,9 @@ async function main(): Promise<void> {
         catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             if (command === "launch-hidden" && /product metadata/i.test(message) && await flackleChanged(root, message).catch(() => false)) return;
-            throw error;
+            if (command !== "launch-hidden" || !/without a verified Vackle session/.test(message)) throw error;
+            await closeFlackle(root, (await readManifest(root)).host);
+            await launch(root, updatesFor(root));
         }
     } else if (command === "apply-update") {
         const staged = option("--stage"); const pid = Number(option("--pid"));

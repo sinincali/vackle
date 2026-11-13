@@ -74,7 +74,7 @@ html, body {
     border-top-color: transparent !important;
 }
 
-.w-72.h-full > .bg-ui-shell.border-l, .w-68 > .bg-ui-content.border-l {
+.w-72.h-full .bg-ui-shell.border-l, .w-68 > .bg-ui-content.border-l {
     position: relative;
     border: 0 !important;
     border-radius: 16px !important;
@@ -82,16 +82,23 @@ html, body {
     background: var(--lg-pane) !important;
     box-shadow: var(--lg-pane-shadow) !important;
 }
-.w-72.h-full > .bg-ui-shell.border-l {
+.w-72.h-full > .relative.h-full.bg-ui-content {
+    background: transparent !important;
+}
+.w-72.h-full > .relative.h-full.bg-ui-content > .pointer-events-none.absolute.inset-0.border-t {
+    display: none;
+}
+.w-72.h-full .bg-ui-shell.border-l {
     width: calc(100% - 8px) !important;
     height: calc(100% - 8px) !important;
+    box-shadow: 0 0 0 .5px rgba(0, 0, 0, .4) !important;
 }
 .w-68 > .bg-ui-content.border-l {
     margin: 56px 8px 8px 0;
     height: calc(100% - 64px) !important;
     overflow: hidden;
 }
-.w-72.h-full > .bg-ui-shell.border-l::after, .w-68 > .bg-ui-content.border-l::after {
+.w-72.h-full .bg-ui-shell.border-l::after, .w-68 > .bg-ui-content.border-l::after {
     content: "";
     position: absolute;
     inset: 0;
@@ -100,19 +107,13 @@ html, body {
     box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .06), inset 0 1px 0 rgba(255, 255, 255, .05);
     pointer-events: none;
 }
-.w-72.h-full > .bg-ui-shell.border-l > :first-child {
+.w-72.h-full .bg-ui-shell.border-l > :first-child {
     border-radius: 16px 16px 0 0;
     corner-shape: round !important;
     overflow: hidden;
 }
 .w-68 > .bg-ui-content.border-l > .shrink-0.h-13.border-b:first-child {
     display: none;
-}
-.w-72.h-full > .bg-ui-shell.border-l .simplebar-track.simplebar-vertical,
-.w-68 > .bg-ui-content.border-l .simplebar-track.simplebar-vertical {
-    top: 10px !important;
-    bottom: 10px !important;
-    right: 2px !important;
 }
 
 .absolute.bottom-0.left-0.right-0.z-10 .rounded-2xl.bg-ui-raised {
@@ -152,22 +153,13 @@ html, body {
     box-shadow: inset 0 .5px 0 rgba(255, 255, 255, .1), var(--lg-pane-shadow);
     pointer-events: none;
 }
-.bg-ui-content.border-t > .flex.flex-col.h-full > .shrink-0.px-2.pb-2 {
+.bg-ui-content.border-t > .flex.flex-col.h-full > .shrink-0.px-2.pb-2,
+.bg-ui-content.border-t > .flex.flex-col.h-full > .relative.flex.flex-col.flex-1 > .shrink-0.px-2.pb-2 {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
     z-index: 5;
-}
-.bg-ui-content.border-t > .flex.flex-col.h-full > .shrink-0.px-2.pb-2::before {
-    content: "";
-    position: absolute;
-    inset: -60px 0 0;
-    z-index: -1;
-    background: linear-gradient(180deg, rgba(17, 17, 19, 0), rgba(17, 17, 19, .88) 34%, rgba(17, 17, 19, .92));
-    backdrop-filter: blur(12px);
-    mask-image: linear-gradient(180deg, transparent, #000 30%);
-    pointer-events: none;
 }
 .bg-ui-content.border-t > .flex.flex-col.h-full > .flex-1.min-h-0.relative .pt-4.pb-4.pr-4 {
     padding-top: 68px;
@@ -177,6 +169,27 @@ html, body {
 .relative.h-7 > .absolute.rounded-t-2xl[style*="background-color"] {
     background: #232325 !important;
     border: 0 !important;
+}
+.relative.h-7 > .absolute.rounded-t-2xl[style*="background-color"]::after {
+    content: "";
+    position: absolute;
+    left: 100%;
+    top: 12px;
+    width: 16px;
+    height: 16px;
+    background: radial-gradient(circle at 100% 0, transparent 15.5px, #232325 16px);
+}
+.relative.h-7 > .absolute.rounded-t-2xl.max-w-\[18rem\], .relative.h-7 > .absolute.inset-0.items-end > :first-child {
+    margin-left: 24px;
+}
+.relative.h-7 > .absolute.rounded-t-2xl.max-w-\[18rem\]::before {
+    content: "";
+    position: absolute;
+    right: 100%;
+    top: 12px;
+    width: 16px;
+    height: 16px;
+    background: radial-gradient(circle at 0 0, transparent 15.5px, #232325 16px);
 }
 .relative.z-10.flex.min-h-16.rounded-2xl[style*="background-color"] {
     box-shadow: 0 10px 30px rgba(0, 0, 0, .35) !important;
@@ -300,7 +313,12 @@ a[href]:not([class]) {
 ::selection {
     background: rgba(255, 255, 255, .22);
 }
-::-webkit-scrollbar-thumb, .simplebar-scrollbar::before {
-    background-color: rgba(255, 255, 255, .16) !important;
-    border-radius: 99px;
+* {
+    scrollbar-width: none !important;
+}
+::-webkit-scrollbar {
+    display: none !important;
+}
+.simplebar-track {
+    display: none !important;
 }

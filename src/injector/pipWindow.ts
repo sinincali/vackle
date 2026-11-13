@@ -17,6 +17,7 @@
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
+import { powershellPath } from "./windows";
 
 const script = String.raw`
 Add-Type -AssemblyName System.Windows.Forms
@@ -49,7 +50,7 @@ while($true){
 
 export function watchPictureInPicture(): ChildProcess {
     const encoded = Buffer.from(script, "utf16le").toString("base64");
-    const watcher = spawn("powershell.exe", ["-NoProfile", "-NonInteractive", "-EncodedCommand", encoded], { windowsHide: true, stdio: "ignore" });
+    const watcher = spawn(powershellPath(), ["-NoProfile", "-NonInteractive", "-EncodedCommand", encoded], { windowsHide: true, stdio: "ignore" });
     watcher.on("error", () => undefined);
     return watcher;
 }

@@ -17,13 +17,16 @@
  */
 
 import { execFile } from "node:child_process";
+import { join } from "node:path";
 import { promisify } from "node:util";
 import { escapeRegex } from "../settings/schema";
 
 const execute = promisify(execFile);
+export const windowsDirectory = (): string => process.env.SystemRoot ?? "C:\\Windows";
+export const powershellPath = (): string => join(windowsDirectory(), "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
 export async function powershell<T>(script: string, variables: Record<string, string> = {}, timeout = 15000): Promise<T> {
     const encoded = Buffer.from("[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); " + script, "utf16le").toString("base64");
-    const { stdout } = await execute("powershell.exe", ["-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
+    const { stdout } = await execute(powershellPath(), ["-NoProfile", "-NonInteractive", "-EncodedCommand", encoded],
         { windowsHide: true, env: { ...process.env, ...variables }, maxBuffer: 4 * 1024 * 1024, timeout });
     return JSON.parse(stdout.trim() || "null") as T;
 }
@@ -103,7 +106,7 @@ export function portListeners(table: string, port: number): { pid: number; addre
     });
 }
 export async function verifyPortOwner(port: number, hostPid: number): Promise<void> {
-    const [table, items] = await Promise.all([execute("netstat", ["-ano"], { windowsHide: true, maxBuffer: 16 * 1024 * 1024, timeout: 15000 }).then(result => result.stdout), processes()]);
+    const [table, items] = await Promise.all([execute(join(windowsDirectory(), "System32", "NETSTAT.EXE"), ["-ano"], { windowsHide: true, maxBuffer: 16 * 1024 * 1024, timeout: 15000 }).then(result => result.stdout), processes()]);
     const listeners = portListeners(table, port);
     const strangers = listeners.filter(listener => !descendant(listener.pid, hostPid, items)).map(listener => listener.pid);
     const commands = strangers.length ? await powershell<{ pid: number; command: string }[]>(

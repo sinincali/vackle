@@ -26,7 +26,10 @@ const joiner = String.fromCodePoint(0x200d), variation = String.fromCodePoint(0x
 const emojiUrl = (emoji: string): string => `/emoji/${[...emoji.includes(joiner) ? emoji : emoji.replaceAll(variation, "")].map(char => char.codePointAt(0)!.toString(16)).join("-")}.svg`;
 function recentEmoji(count: number): string[] {
     try {
-        const recent: unknown = JSON.parse(localStorage.getItem("flackle-emoji") ?? "null")?.state?.recent;
+        const state = JSON.parse(localStorage.getItem("flackle-emoji") ?? "null")?.state;
+        const usage: unknown = state?.reactionUsage ?? state?.usage;
+        const recent: unknown = Array.isArray(state?.recent) ? state.recent : usage && typeof usage === "object"
+            ? Object.entries(usage as Record<string, { score?: number }>).sort(([, a], [, b]) => (b?.score ?? 0) - (a?.score ?? 0)).map(([emoji]) => emoji) : [];
         return Array.isArray(recent) ? recent.filter((emoji): emoji is string => typeof emoji === "string").slice(0, count) : [];
     } catch { return []; }
 }
@@ -75,7 +78,9 @@ export default {
             const target = row && reactionTarget(row);
             if (!target || !anchor) return;
             const { conversationId: conversation, messageId } = target;
-            const buttons = quick().slice(0, Math.max(3, favorites.length)).map(emoji => {
+            const bar = anchor.parentElement;
+            const native = new Set([...bar?.querySelectorAll<HTMLImageElement>(':scope > button img[src^="/emoji/"]') ?? []].map(image => image.alt.replaceAll(variation, "")));
+            const buttons = quick().filter(emoji => !native.has(emoji.replaceAll(variation, ""))).slice(0, Math.max(3, favorites.length)).map(emoji => {
                 const wrapper = anchor.cloneNode(true) as HTMLElement; const button = wrapper.querySelector("button")!; wrapper.dataset.vackleQuick = "";
                 button.setAttribute("aria-label", `React with ${emoji}`); button.title = `React with ${emoji}`;
                 const image = Object.assign(document.createElement("img"), { src: emojiUrl(emoji), alt: emoji, className: "vackle-quick-reaction", draggable: false });
@@ -85,7 +90,12 @@ export default {
                 return wrapper;
             });
             anchor.before(...buttons);
-            return () => { for (const button of buttons) button.remove(); };
+            const fit = (): void => {
+                for (const button of buttons) button.style.display = "";
+                for (let i = buttons.length - 1; bar && i >= 0 && bar.offsetWidth > row.offsetWidth / 2; i--) buttons[i]!.style.display = "none";
+            };
+            const resize = new ResizeObserver(fit); resize.observe(row); fit();
+            return () => { resize.disconnect(); for (const button of buttons) button.remove(); };
         });
         if (settings["context-menu"]) api.observe(cornerReaction, button => {
             const emoji = quick()[[...document.querySelectorAll(cornerReaction)].indexOf(button)];

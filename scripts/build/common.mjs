@@ -33,7 +33,7 @@ const count = git("rev-list", "--count", "HEAD");
 const [major, minor] = pkg.version.split(".");
 export const VERSION = /^\d+$/.test(count) ? `${major}.${minor}.${count}` : pkg.version;
 export const gitHash = process.env.VACKLE_COMMIT || git("rev-parse", "--short", "HEAD");
-export const RUNTIME = `node-${process.versions.node}+sea-1`;
+export const RUNTIME = `node-${process.versions.node}+sea-2`;
 export const define = {
     VACKLE_VERSION: JSON.stringify(VERSION), VACKLE_RUNTIME: JSON.stringify(RUNTIME), VACKLE_COMMIT: JSON.stringify(gitHash),
     VACKLE_REPOSITORY: JSON.stringify(pkg.vackle?.repository ?? ""), VACKLE_PUBLIC_KEY: JSON.stringify(pkg.vackle?.publicKey ?? "")

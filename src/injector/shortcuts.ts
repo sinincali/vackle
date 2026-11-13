@@ -21,7 +21,7 @@ import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { hash, type Installation } from "./detection";
 import { atomicWrite, exists, readJson, safeTree } from "./files";
-import { powershell } from "./windows";
+import { powershell, powershellPath } from "./windows";
 import { isRecord } from "../settings/schema";
 
 interface ShortcutLocations { desktop: string; programs: string; pinned: string; }
@@ -66,8 +66,7 @@ export function shortcutCommand(root: string): { target: string; arguments: stri
     const script = `& ${quote(join(root, "installed", "Vackle.exe"))} launch-hidden`;
     const args = `-NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand ${Buffer.from(script, "utf16le").toString("base64")}`;
     if (args.length > 1023) throw new Error("Launcher path exceeds Windows shortcut argument capacity");
-    return { target: join(process.env.SystemRoot ?? "C:\\Windows", "System32", "WindowsPowerShell", "v1.0", "powershell.exe"),
-        arguments: args };
+    return { target: powershellPath(), arguments: args };
 }
 export function vackleLaunch(args: string, root: string): boolean {
     const encoded = /-EncodedCommand\s+([A-Za-z0-9+/=]+)\s*$/i.exec(args ?? "")?.[1];
