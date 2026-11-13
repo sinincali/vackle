@@ -28,7 +28,7 @@ const manifest = JSON.parse(await readFile("src/extension/manifest.json", "utf8"
 await mkdir("dist/extension", { recursive: true });
 await writeFile("dist/extension/manifest.json", JSON.stringify({ ...manifest, version: VERSION }, null, 2));
 await copyFile("src/assets/vackle-128.png", "dist/extension/icon.png");
-await writeFile("dist/extension/adblock.js", `if(${embed}&&${insideFlackle}){${await readFile("src/injector/adguard.js", "utf8")}\n}`);
+await writeFile("dist/extension/adblock.js", `if(${embed}&&${insideFlackle}){${await readFile("src/shared/adguard.js", "utf8")}\n}`);
 await buildOrWatchAll([
     { ...rendererOpts, entryPoints: ["src/extension/page.ts"], outfile: "dist/extension/vackle.js" },
     { ...commonOpts, entryPoints: ["src/extension/content.ts"], outfile: "dist/extension/content.js", format: "iife", platform: "browser", target: "chrome120" },

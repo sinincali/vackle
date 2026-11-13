@@ -17,63 +17,38 @@
  */
 
 import { createHash, createPrivateKey, createPublicKey, sign, verify } from "node:crypto";
-import { execFileSync, spawnSync } from "node:child_process";
-import { readFile, writeFile } from "node:fs/promises";
-import { buildOrWatchAll, commonOpts, define, gitHash, IS_WATCH, pkg, rendererOpts, RUNTIME, VERSION } from "./common.mjs";
+import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { copyFile, readFile, writeFile } from "node:fs/promises";
+import { buildOrWatchAll, gitHash, IS_WATCH, pkg, rendererOpts, VERSION } from "./common.mjs";
 
-await buildOrWatchAll([
-    { ...rendererOpts, entryPoints: ["src/index.ts"], outfile: "dist/renderer.js" },
-    { ...commonOpts, entryPoints: ["src/injector/index.ts"], outfile: "dist/injector.cjs", format: "cjs", platform: "node", target: "node22", define }
-]);
+await buildOrWatchAll([{ ...rendererOpts, entryPoints: ["src/index.ts"], outfile: "dist/renderer.js" }]);
 if (IS_WATCH) console.info("Watching sources. Run pnpm inject and relaunch Flackle to load rebuilt bundles.");
 else {
-    await writeFile("dist/sea.json", JSON.stringify({ main: "dist/injector.cjs", output: "dist/Vackle.exe", disableExperimentalSEAWarning: true, execArgvExtension: "none",
-        assets: { "injector.cjs": "dist/injector.cjs", "renderer.js": "dist/renderer.js" } }, null, 2));
-    await writeFile("dist/runtime.txt", RUNTIME);
-    execFileSync(process.execPath, ["--build-sea", "dist/sea.json"], { stdio: "inherit" });
-    await stripNodeSignature("dist/Vackle.exe");
+    const sha256 = bytes => createHash("sha256").update(bytes).digest("hex");
+    const launcher = process.env.VACKLE_LAUNCHER ?? "../Vackle Installer/bin/Release/net472/Vackle.exe";
+    if (!existsSync(launcher)) throw new Error(`${launcher} is missing. Build the Vackle Installer repo first, or set VACKLE_LAUNCHER to its Vackle.exe.`);
+    await copyFile(launcher, "dist/Vackle.exe");
+    await writeFile("dist/injector.cjs", "throw new Error(\"Vackle runs natively now. Start Flackle with the Vackle shortcut.\");\n");
     const smoke = spawnSync("dist/Vackle.exe", ["build-smoke-test"], { encoding: "utf8", timeout: 30000 });
     if (!/Unknown command: build-smoke-test/.test(smoke.stderr)) throw new Error(`Vackle.exe failed its smoke test: ${smoke.stderr || smoke.error}`);
-    if (process.env.VACKLE_SIGNING_KEY) await signRelease(process.env.VACKLE_SIGNING_KEY);
-    console.info(`Built Vackle ${VERSION} (${gitHash || "no commit"})`);
+    const runtime = `native-${sha256(await readFile("dist/Vackle.exe")).slice(0, 12)}`;
+    await writeFile("dist/vackle-local.json", JSON.stringify({ version: VERSION, runtime, ...gitHash ? { commit: gitHash } : {} }));
+    if (process.env.VACKLE_SIGNING_KEY) await signRelease(process.env.VACKLE_SIGNING_KEY, runtime, sha256);
+    console.info(`Built Vackle ${VERSION} (${gitHash || "no commit"}), launcher ${runtime}`);
 }
 
-async function stripNodeSignature(path) {
-    const bytes = await readFile(path);
-    const optional = bytes.readUInt32LE(0x3c) + 24;
-    if (bytes.readUInt16LE(optional) !== 0x20b) throw new Error("Vackle.exe is not a 64-bit PE file");
-    const directory = optional + 112 + 4 * 8;
-    const size = bytes.readUInt32LE(directory + 4);
-    if (!size) return;
-    const tail = bytes.length - size;
-    if (bytes.readUInt32LE(tail) !== size || bytes.readUInt16LE(tail + 6) !== 2) throw new Error("Unexpected certificate layout in the SEA output");
-    const output = Buffer.from(bytes.subarray(0, tail));
-    output.writeUInt32LE(0, directory); output.writeUInt32LE(0, directory + 4);
-    output.writeUInt32LE(peChecksum(output, optional + 64), optional + 64);
-    await writeFile(path, output);
-}
-
-function peChecksum(bytes, field) {
-    let sum = 0;
-    for (let index = 0; index < bytes.length; index += 2) {
-        if (index === field || index === field + 2) continue;
-        sum += index + 1 < bytes.length ? bytes.readUInt16LE(index) : bytes[index];
-        sum = (sum & 0xffff) + (sum >>> 16);
-    }
-    return ((sum & 0xffff) + (sum >>> 16) + bytes.length) >>> 0;
-}
-
-async function signRelease(keyPath) {
+async function signRelease(keyPath, runtime, sha256) {
     const privateKey = createPrivateKey(await readFile(keyPath));
     if (createPublicKey(privateKey).export({ format: "der", type: "spki" }).toString("base64") !== pkg.vackle?.publicKey)
         throw new Error("package.json publicKey does not match the signing key");
     const files = {};
     for (const name of ["Vackle.exe", "injector.cjs", "renderer.js"]) {
         const bytes = await readFile(`dist/${name}`);
-        files[name] = { sha256: createHash("sha256").update(bytes).digest("hex"), size: bytes.length };
+        files[name] = { sha256: sha256(bytes), size: bytes.length };
     }
     const notes = process.env.VACKLE_NOTES_FILE ? await readFile(process.env.VACKLE_NOTES_FILE, "utf8") : `Vackle ${VERSION}`;
-    const manifest = JSON.stringify({ schema: 1, version: VERSION, runtime: RUNTIME, notes: notes.trim().slice(0, 20000), ...gitHash ? { commit: gitHash } : {}, files });
+    const manifest = JSON.stringify({ schema: 1, version: VERSION, runtime, notes: notes.trim().slice(0, 20000), ...gitHash ? { commit: gitHash } : {}, files });
     const signature = sign(null, Buffer.from(manifest, "utf8"), privateKey).toString("base64");
     if (!verify(null, Buffer.from(manifest, "utf8"), createPublicKey(privateKey), Buffer.from(signature, "base64"))) throw new Error("Signature self-check failed");
     await writeFile("dist/vackle-release.json", JSON.stringify({ manifest, signature }));

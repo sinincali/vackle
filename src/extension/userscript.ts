@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { version } from "../injector/version";
+import { version } from "../shared/version";
 import { createHandler } from "./handler";
 import { serve } from "./host";
 

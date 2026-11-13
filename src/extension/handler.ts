@@ -17,8 +17,8 @@
  */
 
 import type { Settings } from "../api/types";
-import { fetchBranding } from "../injector/dearrow";
-import { translateText } from "../injector/translate";
+import { fetchBranding } from "../shared/dearrow";
+import { translateText } from "../shared/translate";
 import { defaults, validateSettings } from "../settings/schema";
 
 export type Handler = (method: unknown, payload: unknown) => Promise<unknown>;

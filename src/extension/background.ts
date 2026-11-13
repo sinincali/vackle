@@ -17,7 +17,7 @@
  */
 
 import type { Settings } from "../api/types";
-import { adblockEnabled } from "../injector/youtubeAdblock";
+import { adblockEnabled } from "../shared/youtubeAdblock";
 import { isRecord } from "../settings/schema";
 import { createHandler } from "./handler";
 

@@ -65,6 +65,11 @@ jobs:
             - name: Build web
               run: pnpm buildWeb
 
+            - name: Get the launcher
+              run: gh release download --repo sinincali/vackle-installer --pattern Vackle.exe --dir "$RUNNER_TEMP/launcher"
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
             - name: Build and sign
               run: |
                   [ -n "$SIGNING_KEY" ] || { echo "The VACKLE_SIGNING_KEY secret is missing"; exit 1; }
@@ -75,6 +80,7 @@ jobs:
                   SIGNING_KEY: ${{ secrets.VACKLE_SIGNING_KEY }}
                   VACKLE_SIGNING_KEY: ${{ runner.temp }}/signing-key.pem
                   VACKLE_NOTES_FILE: ${{ runner.temp }}/notes.md
+                  VACKLE_LAUNCHER: ${{ runner.temp }}/launcher/Vackle.exe
 
             - name: Attest build provenance
               if: github.repository == 'sinincali/vackle'

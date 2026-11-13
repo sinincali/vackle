@@ -16,14 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-declare const VACKLE_VERSION: string | undefined;
-declare const VACKLE_REPOSITORY: string | undefined;
-declare const VACKLE_PUBLIC_KEY: string | undefined;
-declare const VACKLE_RUNTIME: string | undefined;
-declare const VACKLE_COMMIT: string | undefined;
+import type { Settings } from "../api/types";
 
-export const version = typeof VACKLE_VERSION === "string" ? VACKLE_VERSION : "0.0.0";
-export const repository = typeof VACKLE_REPOSITORY === "string" ? VACKLE_REPOSITORY : "";
-export const publicKey = typeof VACKLE_PUBLIC_KEY === "string" ? VACKLE_PUBLIC_KEY : "";
-export const runtime = typeof VACKLE_RUNTIME === "string" ? VACKLE_RUNTIME : "dev";
-export const commit = typeof VACKLE_COMMIT === "string" ? VACKLE_COMMIT : "";
+export const adblockEnabled = (settings: Settings | undefined): boolean => settings?.plugins["youtube-adblock"]?.enabled === true;

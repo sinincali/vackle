@@ -16,18 +16,6 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { join } from "node:path";
-import type { Settings } from "../api/types";
-import { defaults, validateSettings } from "../settings/schema";
-import { atomicWrite, exists, readJson, safeTree } from "./files";
+declare const VACKLE_VERSION: string | undefined;
 
-export async function loadSettings(root: string): Promise<Settings> {
-    const path = join(root, "settings.json");
-    await safeTree(root, path);
-    return await exists(path) ? validateSettings(await readJson(path)) : defaults();
-}
-export async function saveSettings(root: string, value: unknown): Promise<void> {
-    const path = join(root, "settings.json");
-    await safeTree(root, path);
-    await atomicWrite(path, JSON.stringify(validateSettings(value), null, 2));
-}
+export const version = typeof VACKLE_VERSION === "string" ? VACKLE_VERSION : "0.0.0";

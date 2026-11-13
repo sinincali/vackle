@@ -15,9 +15,7 @@ Flackle client mod
 
 ## Installing / Uninstalling
 
-Download `Vackle.exe` from the [latest release](https://github.com/sinincali/vackle/releases/latest) and run it
-
-Vackle is made for a PC only you use. While Flackle is open with Vackle, other Windows accounts signed in on the same PC could reach your Flackle session.
+Download `Vackle.exe` from [vackle.dev](https://vackle.dev/download) and run it. It also updates, repairs and uninstalls Vackle
 
 ### Browser extension (flackle.com in Chrome, Edge, Brave or Firefox)
 
@@ -51,7 +49,7 @@ Mention of it does not imply any affiliation with or endorsement by Flackle.
 <details>
 <summary>Why some antivirus programs flag Vackle.exe</summary>
 
-A couple of antivirus engines flag Vackle.exe with generic "suspicious" labels, not a known virus. Vackle runs hidden PowerShell commands to find Flackle, make shortcuts and check running programs, which some malware also does. Vackle.exe is also not code signed yet, so every new build looks unknown, and it is built on Node.js so it still calls itself node.exe inside. Vackle is open source and every release is built from this repository by GitHub Actions.
+Some antivirus programs can flag new versions of Vackle.exe because it is not code signed yet, so every new build looks unknown to them. Vackle is open source, and every release is built from public code by GitHub Actions in [vackle](https://github.com/sinincali/vackle) and [vackle-installer](https://github.com/sinincali/vackle-installer).
 
 </details>
 
