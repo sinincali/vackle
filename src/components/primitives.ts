@@ -77,7 +77,8 @@ export function syncToggle(input: HTMLInputElement): void {
 }
 export function heading(title: string, description: string): HTMLElement {
     const root = element("header", "vackle-page-heading");
-    root.append(element("h2", "", title), element("p", "", description));
+    root.append(element("h2", "", title));
+    if (description) root.append(element("p", "", description));
     return root;
 }
 export function settingRow(label: string, description: string, ...controls: HTMLElement[]): HTMLElement {

@@ -82,6 +82,9 @@ jobs:
                   VACKLE_NOTES_FILE: ${{ runner.temp }}/notes.md
                   VACKLE_LAUNCHER: ${{ runner.temp }}/launcher/Vackle.exe
 
+            - name: Write plugin list
+              run: node scripts/build/pluginsManifest.mjs
+
             - name: Attest build provenance
               if: github.repository == 'sinincali/vackle'
               uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8
@@ -93,6 +96,7 @@ jobs:
                       dist/extension.zip
                       dist/Vackle.user.js
                       dist/vackle-release.json
+                      dist/plugins.json
 
             - name: Upload DevBuild as release
               if: github.repository == 'sinincali/vackle'
@@ -101,6 +105,7 @@ jobs:
                   gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/devbuild" -f sha="$GITHUB_SHA" -F force=true > /dev/null
                   gh release upload devbuild --clobber dist/Vackle.exe dist/injector.cjs dist/renderer.js dist/extension.zip dist/Vackle.user.js dist/Vackle.meta.js
                   gh release upload devbuild --clobber dist/vackle-release.json
+                  gh release upload devbuild --clobber dist/plugins.json
                   gh release edit devbuild --title "DevBuild $(git rev-parse --short HEAD)" --notes-file "$RUNNER_TEMP/notes.md" --latest
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

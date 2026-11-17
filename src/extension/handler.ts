@@ -17,6 +17,7 @@
  */
 
 import type { Settings } from "../api/types";
+import { fetchBadges, submitBadge } from "../shared/badgeDesign";
 import { fetchBranding } from "../shared/dearrow";
 import { translateText } from "../shared/translate";
 import { defaults, validateSettings } from "../settings/schema";
@@ -38,6 +39,8 @@ export function createHandler(load: () => Promise<unknown>, store: (settings: Se
         }
         if (method === "translate") return translateText(payload);
         if (method === "branding" && typeof payload === "string") return fetchBranding(payload);
+        if (method === "badges") return fetchBadges();
+        if (method === "badge-submit") return submitBadge(payload);
         throw new Error("Unknown bridge operation");
     };
 }

@@ -29,7 +29,7 @@ const locations: Record<ToolboxLocation, string> = { titlebar: "Title bar", pane
 
 interface OverviewActions { navigate(section: string): void; commands(): void; run: RunAction; }
 export function overviewPage(manager: PluginManager, store: SettingsStore, customCss: CustomCss,
-    config: Pick<BootstrapConfig, "version" | "hostVersion">, actions: OverviewActions): HTMLElement {
+    config: Pick<BootstrapConfig, "version" | "hostVersion">, actions: OverviewActions, sync?: () => HTMLElement): HTMLElement {
     const root = element("div", "vackle-page vackle-overview");
     const header = element("section", "vackle-section vackle-identity");
     const brand = element("div", "vackle-brand");
@@ -68,6 +68,7 @@ export function overviewPage(manager: PluginManager, store: SettingsStore, custo
     });
     settings.append(settingRow("Toolbox location", "Where the Vackle button appears. When hidden, open Vackle from Flackle settings or Ctrl+Shift+V.", location.root));
     root.append(settings);
+    if (sync) root.append(sync());
     const shortcuts = element("section", "vackle-section vackle-shortcuts");
     shortcuts.append(element("h3", "vackle-section-title", "Keyboard shortcuts"));
     for (const [label, combination] of [["Open Vackle settings", ["Ctrl", "Shift", "V"]], ["Open command palette", ["Ctrl", "Shift", "P"]]] as const)

@@ -29,12 +29,17 @@ import { SettingsIntegration } from "./settingsIntegration";
 import { openModal } from "./modal";
 import { pluginPage, pluginSettings } from "./pluginPage";
 import { overviewPage } from "./overviewPage";
+import { CloudSync } from "../core/sync";
+import { syncSection } from "./syncSection";
 import { themePage } from "./themePage";
+import { badgePage } from "./badgePage";
+import { badgeCatalog } from "../shared/badgeDesign";
 import { button, element, heading, settingRow, type RunAction } from "./primitives";
 
 export async function createSettingsPanel(manager: PluginManager, store: SettingsStore, customCss: CustomCss, themes: Themes,
     config: BootstrapConfig, bridge: Bridge, extensions: Extensions): Promise<{ open(): void; dispose(): Promise<void> }> {
     await bridge.style("settings-ui", css);
+    const sync = bridge.sync ? new CloudSync({ sync: bridge.sync.bind(bridge) }, store) : undefined;
     const pluginFilters = { query: "", filter: "All", tags: [] as string[] };
     const run: RunAction = async (operation, refresh = true) => {
         try {
@@ -62,7 +67,8 @@ export async function createSettingsPanel(manager: PluginManager, store: Setting
         closeModal?.();
         if (section === "plugins") return pluginPage(manager, run, openPluginSettings, pluginFilters, bridge.restart);
         if (section === "css" || section === "themes") return themePage(section, themes, customCss, store, run);
-        if (section === "overview") return overviewPage(manager, store, customCss, config, { navigate: section => integration.activate(section), commands: () => extensions.commands.open(), run });
+        if (section === "badge") return badgePage(bridge.badgeSubmit?.bind(bridge), message => extensions.notices.notify(message), bridge.badges && (async () => badgeCatalog(await bridge.badges!())));
+        if (section === "overview") return overviewPage(manager, store, customCss, config, { navigate: section => integration.activate(section), commands: () => extensions.commands.open(), run }, sync && (() => syncSection(sync, store, run, message => extensions.notices.notify(message))));
         const root = element("div", "vackle-page");
         if (section === "notifications") {
             root.append(heading("Notification Log", "Recent Vackle notifications for this session. Flackle notifications are untouched."));
@@ -113,7 +119,7 @@ export async function createSettingsPanel(manager: PluginManager, store: Setting
     };
     const integration = new SettingsIntegration([
         { id: "overview", label: "Vackle" }, { id: "plugins", label: "Plugins" }, { id: "themes", label: "Themes" },
-        { id: "css", label: "QuickCSS" }, { id: "notifications", label: "Notification Log" }, { id: "diagnostics", label: "Developer" }
+        { id: "css", label: "QuickCSS" }, { id: "badge", label: "Custom Badge" }, { id: "notifications", label: "Notification Log" }, { id: "diagnostics", label: "Developer" }
     ], render);
     const open = (section = "overview"): void => { void integration.open(section).catch(error => { log("settings", "Native integration failed", error); extensions.notices.notify(String(error), "error"); }); };
     const toolbox = createToolbox(manager, store, customCss, themes, open, () => extensions.commands.open(), bridge.restart);

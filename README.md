@@ -1,17 +1,34 @@
-# Vackle
+<div align="center">
 
-![](https://img.shields.io/github/package-json/v/sinincali/vackle?style=for-the-badge&logo=github&logoColor=fff&label=&color=1d2021&labelColor=282828)
+<img src="assets/vackle-banner.png" alt="Vackle gives Flackle wings." width="100%">
 
-Flackle client mod
+**A lightweight client mod for Flackle with 50+ plugins, custom themes and one-click install.**
+
+[![Version](https://img.shields.io/github/package-json/v/sinincali/vackle?style=for-the-badge&logo=github&logoColor=fff&label=&color=1d2021&labelColor=282828)](https://github.com/sinincali/vackle/releases/latest)
+[![License](https://img.shields.io/github/license/sinincali/vackle?style=for-the-badge&label=license&color=1d2021&labelColor=282828)](LICENSE)
+[![Stars](https://img.shields.io/github/stars/sinincali/vackle?style=for-the-badge&color=1d2021&labelColor=282828)](https://github.com/sinincali/vackle/stargazers)
+
+[**Download**](https://vackle.dev/download) &nbsp;&nbsp;·&nbsp;&nbsp; [**Join the Community**](https://flackle.com/invite/7VW8IXBE) &nbsp;&nbsp;·&nbsp;&nbsp; [**Releases**](https://github.com/sinincali/vackle/releases/latest)
+
+</div>
 
 ## Features
 
--   Easy to install: one `Vackle.exe` finds Flackle and sets everything up
--   50+ built in plugins
--   Fairly lightweight despite the many inbuilt plugins
--   Custom CSS and Themes: Inbuilt css editor with support to import any css files
--   Safe updates: every release is signed, and a broken update is rolled back automatically
--   Never touches Flackle's own files: uninstalling restores everything as it was
+### Easy to install
+
+One `Vackle.exe` finds Flackle and sets everything up.
+
+### 50+ built in plugins
+
+Fairly lightweight despite how many there are. Browse the full list and see what each one does at [vackle.dev/plugins](https://vackle.dev/plugins).
+
+### Custom CSS and themes
+
+Inbuilt CSS editor with support to import any CSS file. You can also find community made themes at [vackle.dev/themes](https://vackle.dev/themes) and install them in a few clicks.
+
+### Optional encrypted Cloud Sync
+
+Keep your plugin settings, themes and QuickCSS in sync between devices. It's off until you turn it on, needs no account, and everything is encrypted on your device with a recovery key that only you hold. Available in the desktop app.
 
 ## Installing / Uninstalling
 
@@ -27,11 +44,9 @@ Install [Tampermonkey](https://www.tampermonkey.net) or [Violentmonkey](https://
 
 The userscript can't block ads in YouTube embeds, and its settings are separate from the extension's.
 
-## Join our Support/Community Server
+---
 
-[Join the server](https://flackle.com/invite/7VW8IXBE)
-
-## Star History
+<div align="center">
 
 <a href="https://star-history.com/#sinincali/vackle&Timeline">
   <picture>
@@ -41,21 +56,8 @@ The userscript can't block ads in YouTube embeds, and its settings are separate 
   </picture>
 </a>
 
-## Disclaimer
+<br>
 
-Flackle is a trademark of its respective owner and solely mentioned for the sake of descriptivity.
-Mention of it does not imply any affiliation with or endorsement by Flackle.
+Vackle is an unofficial, independent project. It isn't made or endorsed by Flackle or Folkward LLC. Flackle is their trademark.
 
-<details>
-<summary>Why some antivirus programs flag Vackle.exe</summary>
-
-Some antivirus programs can flag new versions of Vackle.exe because it is not code signed yet, so every new build looks unknown to them. Vackle is open source, and every release is built from public code by GitHub Actions in [vackle](https://github.com/sinincali/vackle) and [vackle-installer](https://github.com/sinincali/vackle-installer).
-
-</details>
-
-<details>
-<summary>Using Vackle may violate Flackle's terms of service</summary>
-
-Flackle's Terms ban modifying the client to get around plan limits, like screenshare quality or bitrate caps. Vackle doesn't touch plan limits and never automates your account. The wording is broad, though, so no client mod is risk-free. If losing your account would be a disaster, don't use one
-
-</details>
+</div>

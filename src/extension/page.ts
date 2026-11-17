@@ -39,7 +39,7 @@ function start(value: Record<string, unknown>): void {
     const config: BootstrapConfig = { version: value.version, hostVersion: "Web", session: value.session, binding: "", settings: validateSettings(value.settings) };
     bootstrap(config, request => post({ type: "request", ...request }), call => ({
         save: settings => call("save", settings), style, restart: async () => location.reload(),
-        branding: videoId => call<unknown>("branding", videoId), translate: request => call<unknown>("translate", request),
+        branding: videoId => call<unknown>("branding", videoId), translate: request => call<unknown>("translate", request), badges: () => call<unknown>("badges", null), badgeSubmit: request => call<unknown>("badge-submit", request),
         openUri: async uri => { if (!isAppUri(uri)) throw new Error("Unsupported app link"); location.assign(uri); }
     }));
 }

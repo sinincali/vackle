@@ -16,6 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
+import type { BadgeCatalog } from "../shared/badgeDesign";
 import type { IconName } from "../components/icons";
 import type { PopupMenuItem } from "../components/popupMenu";
 
@@ -45,6 +46,9 @@ export interface Bridge {
     updateStatus?(force: boolean): Promise<unknown>;
     updateInstall?(): Promise<unknown>;
     updateSkip?(version: string): Promise<void>;
+    badges?(): Promise<unknown>;
+    badgeSubmit?(request: { user: string; image: string }): Promise<unknown>;
+    sync?(request: { op: "load" } | { op: "clear" } | { op: "store"; value: string } | { op: "http"; method: "GET" | "PUT" | "DELETE"; id: string; token: string; body?: string }): Promise<unknown>;
 }
 export interface SettingDefinition {
     label: string;
@@ -71,6 +75,7 @@ export interface ResourceScope {
     openUri(uri: string): Promise<void>;
     translate(text: string, from: string, to: string): Promise<Translation>;
     image(url: string): Promise<Blob>;
+    badges(): Promise<BadgeCatalog>;
     dispose(): Promise<void>;
 }
 export interface Branding { title: string | null; thumbnail: number | null; }

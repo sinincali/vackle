@@ -17,6 +17,7 @@
  */
 
 import type { Branding, Bridge, ResourceScope, Translation } from "../api/types";
+import { badgeCatalog, type BadgeCatalog } from "../shared/badgeDesign";
 import { log } from "../utils/logger";
 
 export class Resources implements ResourceScope {
@@ -62,6 +63,10 @@ export class Resources implements ResourceScope {
         const result = await this.bridge.fetchImage?.(url) as { type?: unknown; data?: unknown } | null | undefined;
         if (typeof result?.type !== "string" || typeof result.data !== "string") throw new Error("Could not download the image");
         return new Blob([Uint8Array.from(atob(result.data), char => char.charCodeAt(0))], { type: result.type });
+    }
+    async badges(): Promise<BadgeCatalog> {
+        if (!this.bridge.badges) throw new Error("Custom badges are unavailable; run Vackle.exe and choose Repair");
+        return badgeCatalog(await this.bridge.badges());
     }
     async dispose(): Promise<void> {
         this.disposed = true;

@@ -321,3 +321,22 @@
 .vackle-update { gap: 12px; }
 .vackle-update-notes { max-height: 220px; overflow-y: auto; padding: 10px 12px; border-radius: 8px; background: var(--ui-layer-content, #0003); color: var(--ui-text-secondary); font-size: 13px; line-height: 18px; white-space: pre-wrap; overflow-wrap: anywhere; scrollbar-width: thin; }
 .vackle-update-actions { justify-content: flex-end; }
+
+.vackle-sync-section { gap: 12px; }
+.vackle-sync-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.vackle-sync { display: flex; flex-direction: column; gap: 12px; }
+.vackle-sync .vackle-hint { margin-top: 0; }
+.vackle-sync-key { font: 600 15px/22px var(--font-mono, monospace); letter-spacing: .06em; text-align: center; color: var(--ui-text-primary); user-select: all; }
+.vackle-sync-actions { display: flex; overflow: hidden; border-radius: var(--vk-radius-sm); background: var(--vk-field); }
+.vackle-sync-actions button { flex: 1; height: 36px; padding: 0 12px; border: 0; background: transparent; color: var(--ui-text-secondary); font: inherit; font-size: 13px; line-height: 20px; cursor: pointer; transition: background-color var(--vk-ease), color var(--vk-ease); }
+.vackle-sync-actions button + button { box-shadow: inset 1px 0 0 var(--vk-rule-raised); }
+.vackle-sync-actions button:hover:not(:disabled) { background: var(--vk-hover); color: var(--ui-text-primary); }
+.vackle-sync-actions button:focus-visible { outline: 2px solid var(--vk-focus); outline-offset: -2px; }
+.vackle-sync-actions button:disabled { opacity: .5; cursor: progress; }
+.vackle-badge-stage { display: flex; align-items: center; justify-content: center; gap: 40px; min-height: 108px; padding: 20px 16px; border-radius: var(--vk-radius-sm); background: var(--vk-field); text-align: center; }
+.vackle-badge-slot { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.vackle-badge-slot-row { display: flex; align-items: flex-end; gap: 14px; }
+.vackle-perk { align-items: center; text-align: center; gap: 18px; padding-top: 8px; }
+.vackle-perk-art { display: grid; place-items: center; width: 112px; height: 112px; }
+.vackle-perk p { max-width: 320px; margin: 0; font-size: 14px; line-height: 22px; color: var(--ui-text-secondary); }
+.vackle-perk .vackle-button { width: 100%; min-height: 40px; justify-content: center; }
