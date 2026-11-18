@@ -85,7 +85,7 @@ export default {
                 if (!look || !catalog) return;
                 const perk = catalog.perk, native = nativeRow(parent);
                 shown = badgeElement(look, native ? rowSize(native) : 16, perk.title, () => showPerk(look, perk, api.notify));
-                if (native) shown.element.style.cssText += ";padding:1px;margin-right:2px;box-sizing:border-box";
+                if (native) shown.element.style.cssText += ";padding:2px;margin-right:2px;box-sizing:border-box";
                 unhint = tooltip(shown.element, "Vackle Lifter", true);
                 inNative = Boolean(native);
                 if (native) native.prepend(shown.element);
