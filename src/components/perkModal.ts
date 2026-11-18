@@ -24,7 +24,7 @@ import { button, element } from "./primitives";
 
 export function showPerk(look: BadgeLook, perk: Perk, notify: (message: string, level?: "info" | "error") => void): () => void {
     const body = element("div", "vackle-perk");
-    const art = badgeElement(look, 96, perk.title), glow = element("div", "vackle-perk-art");
+    const art = badgeElement(look, 120, perk.title), glow = element("div", "vackle-perk-art");
     glow.append(art.element);
     body.append(glow, element("p", "", perk.description));
     if (perk.link) {

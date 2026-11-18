@@ -30,6 +30,8 @@ import { openModal } from "./modal";
 import { pluginPage, pluginSettings } from "./pluginPage";
 import { overviewPage } from "./overviewPage";
 import { CloudSync } from "../core/sync";
+import { createExternalQuickCss } from "./quickCssExternal";
+import { closeQuickCss, openQuickCss } from "./quickCssWindow";
 import { syncSection } from "./syncSection";
 import { themePage } from "./themePage";
 import { badgePage } from "./badgePage";
@@ -40,6 +42,7 @@ export async function createSettingsPanel(manager: PluginManager, store: Setting
     config: BootstrapConfig, bridge: Bridge, extensions: Extensions): Promise<{ open(): void; dispose(): Promise<void> }> {
     await bridge.style("settings-ui", css);
     const sync = bridge.sync ? new CloudSync({ sync: bridge.sync.bind(bridge) }, store) : undefined;
+    const external = bridge.quickCss ? createExternalQuickCss({ quickCss: bridge.quickCss.bind(bridge) }, store, customCss) : undefined;
     const pluginFilters = { query: "", filter: "All", tags: [] as string[] };
     const run: RunAction = async (operation, refresh = true) => {
         try {
@@ -66,7 +69,7 @@ export async function createSettingsPanel(manager: PluginManager, store: Setting
     const render = (section: string): HTMLElement => {
         closeModal?.();
         if (section === "plugins") return pluginPage(manager, run, openPluginSettings, pluginFilters, bridge.restart);
-        if (section === "css" || section === "themes") return themePage(section, themes, customCss, store, run);
+        if (section === "css" || section === "themes") return themePage(section, themes, customCss, store, run, external && (() => external.open()));
         if (section === "badge") return badgePage(bridge.badgeSubmit?.bind(bridge), message => extensions.notices.notify(message), bridge.badges && (async () => badgeCatalog(await bridge.badges!())));
         if (section === "overview") return overviewPage(manager, store, customCss, config, { navigate: section => integration.activate(section), commands: () => extensions.commands.open(), run }, sync && (() => syncSection(sync, store, run, message => extensions.notices.notify(message))));
         const root = element("div", "vackle-page");
@@ -125,6 +128,8 @@ export async function createSettingsPanel(manager: PluginManager, store: Setting
     const toolbox = createToolbox(manager, store, customCss, themes, open, () => extensions.commands.open(), bridge.restart);
     const shortcut = (event: KeyboardEvent): void => { if (event.ctrlKey && event.shiftKey && event.code === "KeyV") { event.preventDefault(); open(); } };
     window.addEventListener("keydown", shortcut);
-    const unregister = extensions.commands.register("core", { id: "open-settings", label: "Open Vackle settings", description: "Manage plugins, themes and QuickCSS", run: () => open() });
-    return { open: () => open(), async dispose() { closeModal?.(); unregister(); window.removeEventListener("keydown", shortcut); toolbox.dispose(); integration.dispose(); await bridge.style("settings-ui", ""); } };
+    const unregister = extensions.commands.register("core", { id: "open-settings", label: "Open Vackle settings", description: "Manage plugins, themes and QuickCSS", icon: "overview", run: () => open() });
+    const unregisterCss = extensions.commands.register("core", { id: "open-quickcss", label: "Open QuickCSS editor", description: external ? "Edit your custom CSS in VS Code or Notepad. Changes apply when you save." : "Edit your custom CSS in a floating window.", icon: "css", run: () => external ? external.open() : openQuickCss(store, customCss) });
+    const unregisterInside = external ? extensions.commands.register("core", { id: "open-quickcss-inside", label: "Edit QuickCSS inside Flackle", description: "Open the small editor over Flackle.", icon: "css", run: () => openQuickCss(store, customCss) }) : undefined;
+    return { open: () => open(), async dispose() { closeModal?.(); unregister(); unregisterCss(); unregisterInside?.(); external?.dispose(); closeQuickCss(); window.removeEventListener("keydown", shortcut); toolbox.dispose(); integration.dispose(); await bridge.style("settings-ui", ""); } };
 }

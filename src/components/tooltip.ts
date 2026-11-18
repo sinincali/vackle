@@ -16,18 +16,32 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-export function tooltip(target: HTMLElement, text: string): () => void {
+const arrow = '<div style="position:absolute;pointer-events:none;width:16px;height:6px;top:-6px;z-index:1"><svg width="16" height="7" viewBox="0 0 16 7" aria-hidden="true" style="position:absolute;top:0;left:0"><path d="M 1.771 5.75 L 6.304 1.565 Q 8 0 9.696 1.565 L 14.229 5.75 L 14.229 7 L 1.771 7 Z" fill="#23232C"/></svg></div>';
+
+export function tooltip(target: HTMLElement, label: string | (() => string), below = false): () => void {
     let tip: HTMLElement | undefined;
     const hide = (): void => { tip?.remove(); tip = undefined; };
     target.addEventListener("mouseenter", () => {
         hide();
-        tip = Object.assign(document.createElement("div"), { textContent: text });
+        const text = typeof label === "function" ? label() : label;
+        tip = document.createElement("div");
         tip.setAttribute("role", "tooltip"); tip.dataset.vackleRoot = "";
-        tip.style.cssText = "position:fixed;z-index:300;pointer-events:none;padding:6px 10px;border-radius:8px;background:var(--ui-layer-tooltip-elevated,#28282f);color:rgb(255 255 255 / .9);font-size:13px;font-weight:500;white-space:nowrap;box-shadow:0 4px 12px rgb(0 0 0 / .35)";
+        if (below) {
+            const box = Object.assign(document.createElement("div"), { textContent: text });
+            box.style.cssText = "position:relative;padding:8px 12px;border-radius:12px;background:#23232c;color:rgb(255 255 255 / .9);font-size:14px;line-height:20px;white-space:nowrap";
+            box.insertAdjacentHTML("afterbegin", arrow);
+            tip.style.cssText = "position:fixed;z-index:300;pointer-events:none;user-select:none";
+            tip.append(box);
+        } else {
+            tip.textContent = text;
+            tip.style.cssText = "position:fixed;z-index:300;pointer-events:none;padding:6px 10px;border-radius:8px;background:var(--ui-layer-tooltip-elevated,#28282f);color:rgb(255 255 255 / .9);font-size:13px;font-weight:500;white-space:nowrap;box-shadow:0 4px 12px rgb(0 0 0 / .35)";
+        }
         document.body.append(tip);
         const anchor = target.getBoundingClientRect(), size = tip.getBoundingClientRect();
-        tip.style.left = `${Math.max(4, anchor.left + anchor.width / 2 - size.width / 2)}px`;
-        tip.style.top = `${Math.max(4, anchor.top - size.height - 6)}px`;
+        const left = Math.max(4, anchor.left + anchor.width / 2 - size.width / 2);
+        tip.style.left = `${left}px`;
+        tip.style.top = below ? `${anchor.bottom + 12}px` : `${Math.max(4, anchor.top - size.height - 6)}px`;
+        if (below) (tip.firstElementChild?.firstElementChild as HTMLElement).style.left = `${anchor.left + anchor.width / 2 - left - 8}px`;
     });
     target.addEventListener("mouseleave", hide);
     return hide;

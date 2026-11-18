@@ -43,7 +43,7 @@ export default {
                 setIdle(false); setSelfIsIdle(false);
             });
         }
-        api.command({ id: "idle", label: "Toggle Idle", description: "Switch between idle and your normal status.", run: () => setSetting("idle", !idle).catch(fail) });
+        api.command({ id: "idle", label: "Toggle Idle", description: "Switch between idle and your normal status.", icon: "clock", run: () => setSetting("idle", !idle).catch(fail) });
         api.observe("[data-status-picker] button", option => {
             const label = option.querySelector("img")?.getAttribute("alt");
             if (label !== "Online") {

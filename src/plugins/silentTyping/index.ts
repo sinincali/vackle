@@ -56,7 +56,7 @@ export default {
                     socket.setState({ sendTypingStart: original.sendTypingStart, sendGuildTypingStart: original.sendGuildTypingStart });
             });
         }
-        api.command({ id: "silenttype", label: "Toggle Silent Typing", description: "Toggle whether you're hiding that you're typing or not.", run: toggle });
+        api.command({ id: "silenttype", label: "Toggle Silent Typing", description: "Toggle whether you're hiding that you're typing or not.", icon: "hidden", run: toggle });
         if (settings["show-icon"] !== false) api.observe('button[aria-label="Chat Settings"]', anchor => {
             const wrapper = anchor.parentElement!.cloneNode(false) as HTMLElement;
             const button = anchor.cloneNode(false) as HTMLButtonElement;

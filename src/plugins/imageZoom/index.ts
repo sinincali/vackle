@@ -19,6 +19,7 @@
 import type { Plugin } from "../../api/types";
 
 const viewer = "body > .fixed.inset-0 img.object-contain";
+const isBadge = (image: HTMLImageElement): boolean => (image.currentSrc || image.src).includes("/badges/");
 const clamp = (value: number, min: number, max: number): number => Math.min(max, Math.max(min, value));
 
 export default {
@@ -52,7 +53,7 @@ export default {
         };
         const down = (event: MouseEvent): void => {
             const target = event.target instanceof HTMLImageElement && event.button === 0 ? event.target.closest<HTMLImageElement>(viewer) : null;
-            if (!target) return;
+            if (!target || isBadge(target)) return;
             event.preventDefault();
             image = target; x = event.clientX; y = event.clientY; lens.hidden = false; image.classList.add("vackle-zooming"); place();
         };

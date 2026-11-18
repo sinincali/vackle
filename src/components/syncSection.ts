@@ -88,7 +88,10 @@ export function syncSection(sync: CloudSync, store: SettingsStore, run: RunActio
                 segment("Download", () => dialog("Replace this device's settings?", "Your plugins, themes and QuickCSS here will be replaced with the cloud copy.", ["Replace", download, true])),
                 segment("Recovery key", () => showKey(saved.key, false)));
             view.append(row, element("p", "vackle-hint", summary()));
-        }, error => notify(error instanceof Error ? error.message : String(error)));
+        }, error => {
+            notify(error instanceof Error ? error.message : String(error));
+            view.replaceChildren(element("p", "vackle-hint", "Couldn't load Cloud Sync."), button("Retry", () => refresh(), "vackle-ghost"));
+        });
     }
     refresh();
     return root;

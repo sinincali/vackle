@@ -25,6 +25,10 @@ export class CustomCss {
         const css = this.store.value.css;
         return this.bridge.style("custom-css", css.enabled ? css.text : "");
     }
+    async setText(text: string): Promise<void> {
+        await this.store.update(settings => { settings.css.text = text; });
+        await this.apply();
+    }
     async setEnabled(enabled: boolean): Promise<void> {
         await this.store.update(settings => { settings.css.enabled = enabled; });
         await this.apply();

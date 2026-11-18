@@ -48,6 +48,7 @@ export interface Bridge {
     updateSkip?(version: string): Promise<void>;
     badges?(): Promise<unknown>;
     badgeSubmit?(request: { user: string; image: string }): Promise<unknown>;
+    quickCss?(request: { op: "open"; text: string } | { op: "write"; text: string } | { op: "read"; stamp?: string }): Promise<unknown>;
     sync?(request: { op: "load" } | { op: "clear" } | { op: "store"; value: string } | { op: "http"; method: "GET" | "PUT" | "DELETE"; id: string; token: string; body?: string }): Promise<unknown>;
 }
 export interface SettingDefinition {
@@ -97,6 +98,7 @@ export interface Command {
     id: string;
     label: string;
     description: string;
+    icon?: IconName;
     run(): void | Promise<void>;
 }
 export interface ContextAction {

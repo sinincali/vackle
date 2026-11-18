@@ -111,7 +111,7 @@ export function bootstrap(config: BootstrapConfig, send: (request: { id: number;
         panel = await createSettingsPanel(manager, store, customCss, themes, config, bridge, extensions);
         updates = new UpdatePrompt(bridge, extensions.notices);
         const prompt = updates;
-        if (bridge.updateStatus) extensions.commands.register("vackle", { id: "check-updates", label: "Check for Vackle Updates", description: "See whether a newer Vackle is available.", run: () => prompt.check(true) });
+        if (bridge.updateStatus) extensions.commands.register("vackle", { id: "check-updates", label: "Check for Vackle Updates", description: "See whether a newer Vackle is available.", icon: "refresh", run: () => prompt.check(true) });
         void prompt.check().catch(error => log("updates", "Update check failed", error));
         handle.ready = true;
         startupMs = performance.now() - startedAt;

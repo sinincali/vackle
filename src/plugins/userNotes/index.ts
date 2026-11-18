@@ -93,9 +93,9 @@ export default {
         });
         if (settings.profile !== false) api.observe('[role="dialog"] div.w-30.h-30.rounded-full', frame => attach(frame.parentElement?.parentElement ?? null, profiles?.getState().target?.user?.id));
 
-        api.command({ id: "export-notes", label: "Copy notes", description: "Copy all your notes to the clipboard.",
+        api.command({ id: "export-notes", label: "Copy notes", description: "Copy all your notes to the clipboard.", icon: "bookmark",
             run: () => navigator.clipboard.writeText(JSON.stringify(notes)).then(() => api.notify("Notes copied"), () => api.notify("Couldn't copy notes", "error")) });
-        api.command({ id: "import-notes", label: "Import notes", description: "Add notes you copied earlier.",
+        api.command({ id: "import-notes", label: "Import notes", description: "Add notes you copied earlier.", icon: "import",
             run: async () => {
                 try {
                     const incoming = cleanNotes(JSON.parse(await navigator.clipboard.readText()));

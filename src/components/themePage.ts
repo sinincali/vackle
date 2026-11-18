@@ -19,7 +19,8 @@
 import type { CustomCss } from "../core/customCss";
 import { presets, type Themes } from "../core/themes";
 import type { SettingsStore } from "../settings/settingsStore";
-import { button, element, heading, settingRow, syncToggle, toggle, type RunAction } from "./primitives";
+import { openQuickCss } from "./quickCssWindow";
+import { button, element, heading, onDispose, settingRow, syncToggle, toggle, type RunAction } from "./primitives";
 
 function importer(label: string, accept: (file: File) => void): HTMLInputElement {
     const file = element("input"); file.type = "file"; file.accept = ".css,text/css"; file.setAttribute("aria-label", label); file.hidden = true;
@@ -27,7 +28,7 @@ function importer(label: string, accept: (file: File) => void): HTMLInputElement
     return file;
 }
 export function themePage(section: "themes" | "css", themes: Themes, customCss: CustomCss, store: SettingsStore,
-    run: RunAction): HTMLElement {
+    run: RunAction, external?: () => Promise<void>): HTMLElement {
     const root = element("div", "vackle-page");
     root.append(heading(section === "themes" ? "Themes" : "QuickCSS", section === "themes" ? "Import local CSS themes. Each theme can be enabled independently." : "Edit CSS without changing Flackle's files. Saved in Vackle's data directory."));
     if (section === "themes") {
@@ -56,17 +57,16 @@ export function themePage(section: "themes" | "css", themes: Themes, customCss: 
             });
         });
         control.querySelector("input")!.id = "vackle-css-enabled";
-        const editor = element("textarea", "vackle-css-editor"); editor.value = store.value.css.text; editor.spellcheck = false; editor.setAttribute("aria-label", "QuickCSS editor");
-        editor.placeholder = ":root {\n    --ui-text-accent: #ef5252;\n}";
-        const saved = element("span", "vackle-status"); saved.setAttribute("role", "status");
-        const save = (): void => { void run(async () => { await store.update(settings => { settings.css.text = editor.value; }); await customCss.apply(); }, false).then(success => { saved.textContent = success ? "Saved" : "Unable to save"; }); };
-        editor.addEventListener("keydown", event => { if (event.ctrlKey && event.code === "KeyS") { event.preventDefault(); save(); } });
-        editor.addEventListener("input", () => { saved.textContent = ""; });
+        onDispose(root, store.observeChanges(() => { const input = control.querySelector("input")!; input.checked = store.value.css.enabled; syncToggle(input); }));
         const file = importer("Import CSS file", selected => void run(() => customCss.importFile(selected)));
+        const switchSection = element("section", "vackle-section"); switchSection.append(settingRow("Custom CSS", "Apply these styles to Flackle.", control));
         const actions = element("div", "vackle-actions");
-        actions.append(button("Save CSS", save, "vackle-primary"), button("Import CSS", () => file.click(), "vackle-ghost", "import"), file, saved);
-        root.append(settingRow("Custom CSS", "Apply these styles to Flackle.", control), editor, actions,
-            element("p", "vackle-hint", "Ctrl+S saves. Theme styles load first; QuickCSS loads last. Maximum 512 KiB."));
+        if (external) actions.append(button("Open editor", () => void run(external, false), "vackle-primary", "external"), button("Edit inside Flackle", () => openQuickCss(store, customCss), "vackle-ghost", "css"));
+        else actions.append(button("Open editor", () => openQuickCss(store, customCss), "vackle-primary", "css"));
+        actions.append(button("Import CSS", () => file.click(), "vackle-ghost", "import"), file);
+        const editSection = element("section", "vackle-section vackle-section-tight");
+        editSection.append(actions, element("p", "vackle-hint", "Open editor uses VS Code or Notepad and applies changes when you save. QuickCSS loads after themes. Max 512 KiB."));
+        root.append(switchSection, editSection);
     }
     return root;
 }

@@ -21,12 +21,13 @@ import { badgeElement } from "../../components/customBadge";
 import { flackleStore } from "../../components/flackleStores";
 import { showPerk } from "../../components/perkModal";
 import { fiberProps } from "../../components/reactFiber";
+import { tooltip } from "../../components/tooltip";
 import type { BadgeCatalog, CustomBadge } from "../../shared/badgeDesign";
 
 const REFRESH = 10 * 60_000;
 const NAME = /^@(\S+)$/;
 type Who = { id?: unknown; username?: unknown } | null | undefined;
-const rowSize = (row: HTMLElement): number => row.classList.contains("gap-2") ? 24 : row.classList.contains("gap-1.5") ? 20 : 16;
+const rowSize = (row: HTMLElement): number => [...row.children].find(child => !child.classList.contains("vackle-custom-badge"))?.getBoundingClientRect().width || (row.classList.contains("gap-2") ? 24 : row.classList.contains("gap-1.5") ? 20 : 16);
 const nativeRow = (parent: Element): HTMLElement | undefined => [...parent.children].find((child): child is HTMLElement => child.hasAttribute("data-profile-badges"));
 
 export default {
@@ -73,8 +74,8 @@ export default {
         api.observe('p[class*="text-white/50"]', anchor => {
             const nameOf = (): string | undefined => NAME.exec(anchor.textContent?.trim() ?? "")?.[1], parent = anchor.parentElement;
             if (!nameOf() || !parent) return;
-            let shown: { element: HTMLElement; dispose(): void } | undefined, own: HTMLElement | undefined, inNative = false;
-            const clear = (): void => { shown?.dispose(); shown = undefined; own?.remove(); own = undefined; };
+            let shown: { element: HTMLElement; dispose(): void } | undefined, own: HTMLElement | undefined, inNative = false, unhint: (() => void) | undefined;
+            const clear = (): void => { unhint?.(); unhint = undefined; shown?.dispose(); shown = undefined; own?.remove(); own = undefined; };
             const place = (): void => {
                 clear();
                 const name = nameOf();
@@ -84,8 +85,10 @@ export default {
                 if (!look || !catalog) return;
                 const perk = catalog.perk, native = nativeRow(parent);
                 shown = badgeElement(look, native ? rowSize(native) : 16, perk.title, () => showPerk(look, perk, api.notify));
+                if (native) shown.element.style.cssText += ";padding:1px;margin-right:2px;box-sizing:border-box";
+                unhint = tooltip(shown.element, "Vackle Lifter", true);
                 inNative = Boolean(native);
-                if (native) native.append(shown.element);
+                if (native) native.prepend(shown.element);
                 else {
                     own = document.createElement("div");
                     own.className = "flex flex-row shrink-0 items-center gap-0.5"; own.dataset.vackleRoot = "";
